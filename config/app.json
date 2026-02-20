@@ -1,0 +1,5 @@
+{
+  "DB_DRIVER": "sqlite",
+  "DATABASE_DSN": "kashvi.db",
+  "REDIS_ADDR": "localhost:6379"
+}
