@@ -16,6 +16,9 @@ const (
 	defaultMySQLDSN       = "root:root@tcp(127.0.0.1:3306)/kashvi?charset=utf8mb4&parseTime=True&loc=Local"
 	defaultSQLServerDSN   = "sqlserver://sa:Your_password123@localhost:1433?database=kashvi"
 	defaultRedisAddr      = "localhost:6379"
+	defaultJWTSecret      = "change-me-in-production"
+	defaultAppPort        = "8080"
+	defaultAppEnv         = "local"
 )
 
 var (
@@ -72,11 +75,59 @@ func RedisAddr() string {
 
 func defaultValues() map[string]string {
 	return map[string]string{
-		"DB_DRIVER":    defaultDatabaseDriver,
-		"REDIS_ADDR":   defaultRedisAddr,
-		"DATABASE_DSN": "",
+		"DB_DRIVER":      defaultDatabaseDriver,
+		"REDIS_ADDR":     defaultRedisAddr,
+		"DATABASE_DSN":   "",
+		"JWT_SECRET":     defaultJWTSecret,
+		"APP_PORT":       defaultAppPort,
+		"APP_ENV":        defaultAppEnv,
+		"REDIS_PASSWORD": "",
 	}
 }
+
+func JWTSecret() string {
+	_ = Load()
+	return get("JWT_SECRET", defaultJWTSecret)
+}
+
+func AppPort() string {
+	_ = Load()
+	return get("APP_PORT", defaultAppPort)
+}
+
+func AppEnv() string {
+	_ = Load()
+	return get("APP_ENV", defaultAppEnv)
+}
+
+func RedisPassword() string {
+	_ = Load()
+	return get("REDIS_PASSWORD", "")
+}
+
+// ── Storage ──────────────────────────────────────────────────────────────────
+
+func StorageDefault() string {
+	_ = Load()
+	return get("STORAGE_DISK", "local")
+}
+
+func StorageLocalRoot() string {
+	_ = Load()
+	return get("STORAGE_LOCAL_ROOT", "storage")
+}
+
+func StorageURL() string {
+	_ = Load()
+	return get("STORAGE_URL", "http://localhost:8080/storage")
+}
+
+func StorageS3Bucket() string   { _ = Load(); return get("S3_BUCKET", "") }
+func StorageS3Region() string   { _ = Load(); return get("S3_REGION", "us-east-1") }
+func StorageS3Key() string      { _ = Load(); return get("S3_KEY", "") }
+func StorageS3Secret() string   { _ = Load(); return get("S3_SECRET", "") }
+func StorageS3Endpoint() string { _ = Load(); return get("S3_ENDPOINT", "") }
+func StorageS3URL() string      { _ = Load(); return get("S3_URL", "") }
 
 func loadFromFiles(configPath, envPath string) error {
 	loaded := defaultValues()
@@ -172,4 +223,11 @@ func get(key, fallback string) string {
 	}
 
 	return fallback
+}
+
+// Get reads any config key by name with an optional fallback.
+// Keys from .env and app.json are available after config.Load().
+func Get(key, fallback string) string {
+	_ = Load()
+	return get(key, fallback)
 }

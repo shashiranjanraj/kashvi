@@ -2,7 +2,7 @@ package database
 
 import (
 	"fmt"
-	"log"
+	"time"
 
 	"github.com/shashiranjanraj/kashvi/config"
 	"gorm.io/driver/mysql"
@@ -10,23 +10,48 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/driver/sqlserver"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 var DB *gorm.DB
 
-func Connect() {
+// Connect opens the database and configures the connection pool.
+// Returns an error instead of calling log.Fatal so the caller can
+// shut down gracefully.
+func Connect() error {
 	driver := config.DatabaseDriver()
 	dsn := config.DatabaseDSN()
 
 	dialector, err := buildDialector(driver, dsn)
 	if err != nil {
-		log.Fatal(err)
+		return fmt.Errorf("database: build dialector: %w", err)
 	}
 
-	DB, err = gorm.Open(dialector, &gorm.Config{})
-	if err != nil {
-		log.Fatal(err)
+	gormCfg := &gorm.Config{
+		Logger: logger.Default.LogMode(logger.Silent), // use pkg/logger, not GORM's own
 	}
+
+	DB, err = gorm.Open(dialector, gormCfg)
+	if err != nil {
+		return fmt.Errorf("database: open: %w", err)
+	}
+
+	// Configure connection pool for production.
+	sqlDB, err := DB.DB()
+	if err != nil {
+		return fmt.Errorf("database: get sql.DB: %w", err)
+	}
+	sqlDB.SetMaxOpenConns(25)
+	sqlDB.SetMaxIdleConns(10)
+	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(2 * time.Minute)
+
+	// Verify connection is live.
+	if err := sqlDB.Ping(); err != nil {
+		return fmt.Errorf("database: ping: %w", err)
+	}
+
+	return nil
 }
 
 func buildDialector(driver, dsn string) (gorm.Dialector, error) {

@@ -1,5 +1,8 @@
 {
   "DB_DRIVER": "sqlite",
   "DATABASE_DSN": "kashvi.db",
-  "REDIS_ADDR": "localhost:6379"
+  "REDIS_ADDR": "localhost:6379",
+  "JWT_SECRET": "change-me-in-production",
+  "APP_PORT": "8080",
+  "APP_ENV": "local"
 }

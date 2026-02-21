@@ -11,9 +11,17 @@ import (
 
 type Middleware func(http.Handler) http.Handler
 
+// RouteInfo describes a single registered named route.
+type RouteInfo struct {
+	Method string
+	Path   string
+	Name   string
+}
+
 type Router struct {
 	mux    chi.Router
-	routes map[string]string
+	routes map[string]string // name → path (legacy, for URL())
+	infos  []RouteInfo       // ordered list for route:list
 	mu     sync.RWMutex
 }
 
@@ -28,6 +36,15 @@ func New() *Router {
 		mux:    chi.NewRouter(),
 		routes: make(map[string]string),
 	}
+}
+
+// Routes returns all named routes registered on the router, in registration order.
+func (r *Router) Routes() []RouteInfo {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+	out := make([]RouteInfo, len(r.infos))
+	copy(out, r.infos)
+	return out
 }
 
 func (r *Router) Handler() http.Handler {
@@ -54,6 +71,30 @@ func (r *Router) Get(path, name string, handler http.HandlerFunc, middlewares ..
 
 func (r *Router) Post(path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
 	r.mount(http.MethodPost, path, name, handler, middlewares...)
+}
+
+func (r *Router) Put(path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
+	r.mount(http.MethodPut, path, name, handler, middlewares...)
+}
+
+func (r *Router) Patch(path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
+	r.mount(http.MethodPatch, path, name, handler, middlewares...)
+}
+
+func (r *Router) Delete(path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
+	r.mount(http.MethodDelete, path, name, handler, middlewares...)
+}
+
+// Mount attaches any http.Handler (or http.HandlerFunc) at the given path.
+// This is useful for third-party handlers like promhttp.Handler().
+func (r *Router) Mount(path string, h http.Handler) {
+	r.mux.Mount(normalizePath(path), h)
+}
+
+// HandleFunc registers h to handle all HTTP methods at path.
+// Use this for endpoints like /metrics where the method doesn't matter.
+func (r *Router) HandleFunc(path string, h http.HandlerFunc) {
+	r.mux.HandleFunc(normalizePath(path), h)
 }
 
 func (r *Router) Path(name string) (string, bool) {
@@ -93,6 +134,7 @@ func (r *Router) mount(method, path, name string, handler http.HandlerFunc, midd
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	r.routes[name] = fullPath
+	r.infos = append(r.infos, RouteInfo{Method: method, Path: fullPath, Name: name})
 }
 
 func (g *Group) Group(prefix string, middlewares ...Middleware) *Group {
@@ -114,6 +156,18 @@ func (g *Group) Post(path, name string, handler http.HandlerFunc, middlewares ..
 	g.mount(http.MethodPost, path, name, handler, middlewares...)
 }
 
+func (g *Group) Put(path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
+	g.mount(http.MethodPut, path, name, handler, middlewares...)
+}
+
+func (g *Group) Patch(path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
+	g.mount(http.MethodPatch, path, name, handler, middlewares...)
+}
+
+func (g *Group) Delete(path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
+	g.mount(http.MethodDelete, path, name, handler, middlewares...)
+}
+
 func (g *Group) mount(method, path, name string, handler http.HandlerFunc, middlewares ...Middleware) {
 	fullPath := joinPath(g.prefix, path)
 	combined := append(append([]Middleware(nil), g.middlewares...), middlewares...)
@@ -128,6 +182,7 @@ func (g *Group) mount(method, path, name string, handler http.HandlerFunc, middl
 	g.router.mu.Lock()
 	defer g.router.mu.Unlock()
 	g.router.routes[name] = fullPath
+	g.router.infos = append(g.router.infos, RouteInfo{Method: method, Path: fullPath, Name: name})
 }
 
 func chain(handler http.Handler, middlewares ...Middleware) http.Handler {
