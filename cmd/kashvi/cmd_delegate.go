@@ -15,14 +15,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// runInProject runs `go run . <subcommand>` in the current working directory.
+// runInProject runs `go run <dir> <subcommand>` in the current working directory.
 // It is used when the kashvi CLI is acting as an external driver for a
 // user project rather than the framework's own internal server.
 func runInProject(subcommand string) error {
 	cwd, _ := os.Getwd()
-	args := []string{"run", ".", subcommand}
+	dir := findEntrypoint(cwd)
+	args := []string{"run", dir, subcommand}
 
-	// Forward any extra CLI args (e.g. kashvi migrate:status)
 	c := exec.Command("go", args...)
 	c.Dir = cwd
 	c.Stdin = os.Stdin
@@ -30,6 +30,44 @@ func runInProject(subcommand string) error {
 	c.Stderr = os.Stderr
 	c.Env = os.Environ()
 	return c.Run()
+}
+
+// findEntrypoint returns the Go package path to pass to `go run`.
+// It checks whether the cwd itself has Go files; if not it probes
+// common subdirectory conventions used by Go projects.
+func findEntrypoint(cwd string) string {
+	// If there are Go files in the cwd, use "." (standard layout)
+	entries, err := os.ReadDir(cwd)
+	if err == nil {
+		for _, e := range entries {
+			if !e.IsDir() && len(e.Name()) > 3 && e.Name()[len(e.Name())-3:] == ".go" {
+				return "."
+			}
+		}
+	}
+
+	// Probe common entrypoint subdirectories in priority order
+	candidates := []string{
+		"cmd/server",
+		"cmd/app",
+		"cmd/main",
+		"main",
+		"cmd",
+	}
+	for _, sub := range candidates {
+		subEntries, err := os.ReadDir(cwd + "/" + sub)
+		if err != nil {
+			continue
+		}
+		for _, e := range subEntries {
+			if !e.IsDir() && len(e.Name()) > 3 && e.Name()[len(e.Name())-3:] == ".go" {
+				return "./" + sub
+			}
+		}
+	}
+
+	// Fallback: let `go run .` produce the original error message
+	return "."
 }
 
 // isProjectMode returns true when the CLI is being used outside the kashvi
