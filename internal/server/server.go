@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/shashiranjanraj/kashvi/config"
-	"github.com/shashiranjanraj/kashvi/internal/kernel"
 	"github.com/shashiranjanraj/kashvi/pkg/cache"
 	"github.com/shashiranjanraj/kashvi/pkg/database"
 	kashvigrpc "github.com/shashiranjanraj/kashvi/pkg/grpc"
@@ -21,8 +20,11 @@ import (
 )
 
 // Start boots the HTTP + gRPC servers, runs until SIGINT/SIGTERM, then shuts
-// down both gracefully.
-func Start() error {
+// down gracefully.
+//
+// handler is the application's root http.Handler (built by pkg/app.buildHandler).
+// Passing nil uses a minimal default handler (useful for quick smoke tests).
+func Start(handler http.Handler) error {
 	if err := config.Load(); err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
@@ -51,14 +53,16 @@ func Start() error {
 
 	storage.Connect()
 
-	// ── HTTP server ────────────────────────────────────────────────────────
+	// ── HTTP server ─────────────────────────────────────────────────────────
 
-	httpKernel := kernel.NewHTTPKernel()
+	if handler == nil {
+		handler = http.NotFoundHandler()
+	}
 
 	addr := ":" + config.AppPort()
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: httpKernel.Handler(),
+		Handler: handler,
 		// Tuned for high-throughput (100k req/min target).
 		ReadTimeout:    5 * time.Second,
 		WriteTimeout:   10 * time.Second,
@@ -79,7 +83,7 @@ func Start() error {
 		}
 	}()
 
-	// ── gRPC server ────────────────────────────────────────────────────────
+	// ── gRPC server ─────────────────────────────────────────────────────────
 
 	grpcSrv, _, grpcErr := kashvigrpc.Start(config.GRPCPort())
 	if grpcErr != nil {
@@ -88,7 +92,7 @@ func Start() error {
 		fmt.Printf("🔌 Kashvi gRPC  on :%s\n", config.GRPCPort())
 	}
 
-	// ── Wait for shutdown signal ───────────────────────────────────────────
+	// ── Wait for shutdown signal ─────────────────────────────────────────────
 
 	select {
 	case err := <-errCh:

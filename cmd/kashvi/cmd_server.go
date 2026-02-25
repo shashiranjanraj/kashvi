@@ -11,54 +11,60 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/shashiranjanraj/kashvi/app/routes"
 	"github.com/shashiranjanraj/kashvi/config"
-	"github.com/shashiranjanraj/kashvi/internal/server"
 	kashvigrpc "github.com/shashiranjanraj/kashvi/pkg/grpc"
 	"github.com/shashiranjanraj/kashvi/pkg/logger"
-	"github.com/shashiranjanraj/kashvi/pkg/router"
 )
 
-// kashvi run — start the HTTP server.
+// kashvi run — in framework-self mode, delegate to go run . serve
+// (the framework repo itself also has a sample app, so the CLI
+// in project-mode delegates via addProjectDelegateCmds, and in
+// framework-self mode this prints guidance rather than hard-coding routes).
 var runCmd = &cobra.Command{
 	Use:   "run",
 	Short: "Start the HTTP server (alias: serve)",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return server.Start()
+		return runInProject("serve")
 	},
 }
 
-// kashvi route:list — print all registered routes.
+// kashvi route:list — in project mode this delegates; in framework-self mode
+// it just explains that routes come from the user project.
 var routeListCmd = &cobra.Command{
 	Use:   "route:list",
 	Short: "List all registered named routes",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		r := router.New()
-		routes.RegisterAPI(r)
-
-		infos := r.Routes()
-		if len(infos) == 0 {
-			fmt.Println("No named routes registered.")
+		if isFrameworkSelf() {
+			fmt.Println("route:list requires your project's app.New().Routes(...) to be registered.")
+			fmt.Println("Run from a project directory:  kashvi route:list")
 			return nil
 		}
-
-		// Sort by path then method.
-		sort.Slice(infos, func(i, j int) bool {
-			if infos[i].Path != infos[j].Path {
-				return infos[i].Path < infos[j].Path
-			}
-			return infos[i].Method < infos[j].Method
-		})
-
-		w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
-		fmt.Fprintln(w, "METHOD\tPATH\tNAME")
-		fmt.Fprintln(w, "------\t----\t----")
-		for _, ri := range infos {
-			fmt.Fprintf(w, "%s\t%s\t%s\n", ri.Method, ri.Path, ri.Name)
-		}
-		return w.Flush()
+		return runInProject("route:list")
 	},
 }
+
+// printRouteTable is a helper used internally when routes are available.
+func printRouteTable(infos []routeInfo) {
+	if len(infos) == 0 {
+		fmt.Println("No named routes registered.")
+		return
+	}
+	sort.Slice(infos, func(i, j int) bool {
+		if infos[i].Path != infos[j].Path {
+			return infos[i].Path < infos[j].Path
+		}
+		return infos[i].Method < infos[j].Method
+	})
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 3, ' ', 0)
+	fmt.Fprintln(w, "METHOD\tPATH\tNAME")
+	fmt.Fprintln(w, "------\t----\t----")
+	for _, ri := range infos {
+		fmt.Fprintf(w, "%s\t%s\t%s\n", ri.Method, ri.Path, ri.Name)
+	}
+	w.Flush() //nolint:errcheck
+}
+
+type routeInfo struct{ Method, Path, Name string }
 
 // kashvi build — compile the server binary.
 var buildCmd = &cobra.Command{
@@ -77,16 +83,16 @@ var buildCmd = &cobra.Command{
 	},
 }
 
-// kashvi serve — alias kept for muscle memory.
+// kashvi serve — alias kept for muscle memory (delegates in project mode).
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "Start the HTTP server",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		return server.Start()
+		return runInProject("serve")
 	},
 }
 
-// kashvi grpc:serve — start the gRPC server standalone.
+// kashvi grpc:serve — start gRPC server standalone.
 var grpcServeCmd = &cobra.Command{
 	Use:   "grpc:serve",
 	Short: "Start the gRPC server only (health-check + reflection)",

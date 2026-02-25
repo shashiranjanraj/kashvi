@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -190,7 +191,8 @@ func (m *Manager) process(raw []byte) {
 func (m *Manager) runWithRetry(job Job, typeName string) {
 	var lastErr error
 	for attempt := 1; attempt <= m.maxRetry; attempt++ {
-		if err := job.Handle(); err != nil {
+		err := m.safeHandle(job)
+		if err != nil {
 			lastErr = err
 			logger.Warn("queue: job failed, retrying",
 				"type", typeName, "attempt", attempt, "error", err)
@@ -204,6 +206,22 @@ func (m *Manager) runWithRetry(job Job, typeName string) {
 	// All retries exhausted — persist the failure.
 	m.persistFailed(job, typeName, lastErr, m.maxRetry)
 	logger.Error("queue: job exhausted retries", "type", typeName, "error", lastErr)
+}
+
+// safeHandle calls job.Handle() and catches panics, converting them to errors
+// so the worker goroutine is never killed by a misbehaving job.
+func (m *Manager) safeHandle(job Job) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			stack := debug.Stack()
+			logger.Error("queue: job panicked",
+				"panic", fmt.Sprintf("%v", r),
+				"stack", string(stack),
+			)
+			err = fmt.Errorf("panic: %v", r)
+		}
+	}()
+	return job.Handle()
 }
 
 // FailedJobs returns a snapshot of all failed jobs.
