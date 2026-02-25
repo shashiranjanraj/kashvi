@@ -4,13 +4,18 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"sort"
+	"syscall"
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 
 	"github.com/shashiranjanraj/kashvi/app/routes"
+	"github.com/shashiranjanraj/kashvi/config"
 	"github.com/shashiranjanraj/kashvi/internal/server"
+	kashvigrpc "github.com/shashiranjanraj/kashvi/pkg/grpc"
+	"github.com/shashiranjanraj/kashvi/pkg/logger"
 	"github.com/shashiranjanraj/kashvi/pkg/router"
 )
 
@@ -78,5 +83,31 @@ var serveCmd = &cobra.Command{
 	Short: "Start the HTTP server",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		return server.Start()
+	},
+}
+
+// kashvi grpc:serve — start the gRPC server standalone.
+var grpcServeCmd = &cobra.Command{
+	Use:   "grpc:serve",
+	Short: "Start the gRPC server only (health-check + reflection)",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if err := config.Load(); err != nil {
+			return err
+		}
+
+		grpcSrv, _, err := kashvigrpc.Start(config.GRPCPort())
+		if err != nil {
+			return err
+		}
+		fmt.Printf("🔌 gRPC server running on :%s\n", config.GRPCPort())
+
+		quit := make(chan os.Signal, 1)
+		signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+		<-quit
+
+		fmt.Println("shutting down gRPC server…")
+		kashvigrpc.Stop(grpcSrv)
+		logger.CloseMongoHandler()
+		return nil
 	},
 }

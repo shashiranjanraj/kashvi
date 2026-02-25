@@ -129,6 +129,48 @@ func StorageS3Secret() string   { _ = Load(); return get("S3_SECRET", "") }
 func StorageS3Endpoint() string { _ = Load(); return get("S3_ENDPOINT", "") }
 func StorageS3URL() string      { _ = Load(); return get("S3_URL", "") }
 
+// ── MongoDB ───────────────────────────────────────────────────────────────────
+
+// MongoURI returns the MongoDB connection string (empty = disabled).
+func MongoURI() string { _ = Load(); return get("MONGO_URI", "") }
+
+// MongoLogDB returns the database name used for application logs.
+func MongoLogDB() string { _ = Load(); return get("MONGO_LOG_DB", "kashvi_logs") }
+
+// MongoLogCollection returns the collection name used for application logs.
+func MongoLogCollection() string { _ = Load(); return get("MONGO_LOG_COLLECTION", "app_logs") }
+
+// ── gRPC ──────────────────────────────────────────────────────────────────────
+
+// GRPCPort returns the port the gRPC server listens on.
+func GRPCPort() string { _ = Load(); return get("GRPC_PORT", "9090") }
+
+// ── Concurrency ───────────────────────────────────────────────────────────────
+
+// WorkerPoolSize returns the bounded goroutine pool size.
+func WorkerPoolSize() int {
+	_ = Load()
+	v := get("WORKER_POOL_SIZE", "50")
+	n := 50
+	fmt.Sscanf(v, "%d", &n) //nolint:errcheck
+	if n <= 0 {
+		n = 50
+	}
+	return n
+}
+
+// RateLimitMax returns the maximum number of requests per minute per IP.
+func RateLimitMax() int {
+	_ = Load()
+	v := get("RATE_LIMIT_MAX", "2000")
+	n := 2000
+	fmt.Sscanf(v, "%d", &n) //nolint:errcheck
+	if n <= 0 {
+		n = 2000
+	}
+	return n
+}
+
 func loadFromFiles(configPath, envPath string) error {
 	loaded := defaultValues()
 

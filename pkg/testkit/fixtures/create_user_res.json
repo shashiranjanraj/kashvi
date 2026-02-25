@@ -1,0 +1,8 @@
+{
+    "status": "success",
+    "data": {
+        "id": 1,
+        "name": "Shashi",
+        "email": "shashi@example.com"
+    }
+}

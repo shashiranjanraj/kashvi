@@ -30,6 +30,30 @@ import (
 	"github.com/shashiranjanraj/kashvi/pkg/logger"
 )
 
+// defaultTransport is the high-performance connection-pooled transport used in
+// production.  Tests can replace DefaultClient.Transport to inject mocks.
+var defaultTransport = &gohttp.Transport{
+	MaxIdleConns:        200,
+	MaxIdleConnsPerHost: 100,
+	IdleConnTimeout:     90 * time.Second,
+	DisableCompression:  false,
+}
+
+// DefaultClient is the shared HTTP client used by all Kashvi outgoing requests.
+// Tests can swap DefaultClient.Transport to intercept calls:
+//
+//	http.DefaultClient.Transport = myMockTransport
+//	defer http.ResetTransport()
+var DefaultClient = &gohttp.Client{
+	Transport: defaultTransport,
+}
+
+// ResetTransport restores the production transport on DefaultClient.
+// Call via defer after injecting a test transport.
+func ResetTransport() {
+	DefaultClient.Transport = defaultTransport
+}
+
 // ------------------- Request -------------------
 
 // Request is a fluent HTTP request builder.
@@ -162,7 +186,7 @@ func (r *Request) do() (*Response, error) {
 		req.Header.Set("Content-Type", ct)
 	}
 
-	resp, err := gohttp.DefaultClient.Do(req)
+	resp, err := DefaultClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http: send: %w", err)
 	}

@@ -1,0 +1,10 @@
+{
+  "name": "Health Check",
+  "description": "GET /health returns 200 with no mocks required",
+  "requestMethod": "GET",
+  "requestUrl": "/health",
+  "expectedCode": 200,
+  "isMockRequired": false,
+  "isDbMocked": false,
+  "netUtilMockStep": []
+}

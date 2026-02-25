@@ -29,6 +29,7 @@ func init() {
 	rootCmd.AddCommand(buildCmd)
 	rootCmd.AddCommand(serveCmd)
 	rootCmd.AddCommand(routeListCmd)
+	rootCmd.AddCommand(grpcServeCmd)
 
 	// Database
 	rootCmd.AddCommand(migrateCmd)

@@ -1,0 +1,32 @@
+{
+    "name": "Create User - External Verification + Email",
+    "description": "POST /api/v1/users with valid payload, mocking external verification API and email send",
+    "requestMethod": "POST",
+    "requestUrl": "/api/v1/users",
+    "requestFileName": "create_user_req.json",
+    "responseFileName": "create_user_res.json",
+    "expectedCode": 201,
+    "isMockRequired": true,
+    "isDbMocked": false,
+    "headers": {
+        "X-API-Key": "test-api-key"
+    },
+    "netUtilMockStep": [
+        {
+            "method": "httprequest",
+            "isMock": true,
+            "matchUrl": "https://verify.external.com/v1/check",
+            "returnData": {
+                "statusCode": 200,
+                "body": "eyJ2ZXJpZmllZCI6dHJ1ZSwicmlzayI6ImxvdyJ9"
+            }
+        },
+        {
+            "method": "sendmail",
+            "isMock": true,
+            "returnData": {
+                "body": ""
+            }
+        }
+    ]
+}

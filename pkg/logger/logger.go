@@ -7,6 +7,12 @@
 //	log := logger.WithCtx(r.Context())
 //	log.Info("payment processed", "amount", 99.99)
 //	// → time=... level=INFO msg="payment processed" request_id=a1b2c3d4 amount=99.99
+//
+// # MongoDB log shipping
+//
+// When MONGO_URI is set in the environment, every log record is also written
+// asynchronously to MongoDB (see MongoHandler).  Call CloseMongoHandler() on
+// graceful shutdown to flush remaining records.
 package logger
 
 import (
@@ -17,27 +23,85 @@ import (
 	"github.com/shashiranjanraj/kashvi/config"
 )
 
+// mongoHandler holds the active MongoHandler so callers can close it on
+// shutdown.  Nil when MongoDB logging is disabled.
+var mongoHandler *MongoHandler
+
 var L *slog.Logger
 
 func init() {
 	var level slog.Level
-	var handler slog.Handler
-
-	opts := &slog.HandlerOptions{Level: level}
 
 	switch config.AppEnv() {
 	case "production", "prod":
 		level = slog.LevelInfo
-		opts.Level = level
-		handler = slog.NewJSONHandler(os.Stdout, opts) // structured JSON for log aggregators
 	default:
 		level = slog.LevelDebug
-		opts.Level = level
-		handler = slog.NewTextHandler(os.Stdout, opts) // human-readable for dev
 	}
 
+	opts := &slog.HandlerOptions{Level: level}
+
+	var stdout slog.Handler
+	switch config.AppEnv() {
+	case "production", "prod":
+		stdout = slog.NewJSONHandler(os.Stdout, opts)
+	default:
+		stdout = slog.NewTextHandler(os.Stdout, opts)
+	}
+
+	handler := buildHandler(stdout, level)
 	L = slog.New(handler)
 	slog.SetDefault(L)
+}
+
+// buildHandler returns a MultiHandler (stdout + MongoDB) when MONGO_URI is
+// set, or just the stdout handler otherwise.
+func buildHandler(stdout slog.Handler, level slog.Level) slog.Handler {
+	uri := config.MongoURI()
+	if uri == "" {
+		return stdout
+	}
+
+	mh, err := NewMongoHandler(uri, config.MongoLogDB(), config.MongoLogCollection())
+	if err != nil {
+		// Log the warning to stdout and continue without MongoDB.
+		slog.New(stdout).Warn("logger: MongoDB handler unavailable, falling back to stdout only",
+			"error", err)
+		return stdout
+	}
+
+	mongoHandler = mh
+
+	// Apply the same minimum level to the MongoHandler.
+	filtered := &levelFilterHandler{inner: mh, level: level}
+	return NewMultiHandler(stdout, filtered)
+}
+
+// CloseMongoHandler flushes buffered log records and disconnects from MongoDB.
+// Should be called during graceful server shutdown.
+func CloseMongoHandler() {
+	if mongoHandler != nil {
+		mongoHandler.Close()
+	}
+}
+
+// levelFilterHandler wraps a slog.Handler and enforces a minimum log level.
+type levelFilterHandler struct {
+	inner slog.Handler
+	level slog.Level
+}
+
+func (f *levelFilterHandler) Enabled(ctx context.Context, l slog.Level) bool {
+	return l >= f.level && f.inner.Enabled(ctx, l)
+}
+func (f *levelFilterHandler) Handle(ctx context.Context, r slog.Record) error {
+	return f.inner.Handle(ctx, r)
+}
+func (f *levelFilterHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return &levelFilterHandler{inner: f.inner.WithAttrs(attrs), level: f.level}
+}
+func (f *levelFilterHandler) WithGroup(name string) slog.Handler {
+	return &levelFilterHandler{inner: f.inner.WithGroup(name), level: f.level}
 }
 
 // ─────────────────────────────────────────────
