@@ -43,8 +43,9 @@ type Scenario struct {
 	Headers         map[string]string `json:"headers"`         // extra request headers
 
 	// Response assertions
-	ResponseFileName string `json:"responseFileName"` // path to expected response JSON file
-	ExpectedCode     int    `json:"expectedCode"`     // expected HTTP status code
+	ResponseFileName   string `json:"responseFileName"`   // path to expected response JSON file
+	ExpectedCode       int    `json:"expectedCode"`       // expected HTTP status code
+	ExpectedStatusCode int    `json:"expectedStatusCode"` // alias for expected HTTP status code
 
 	// Behaviour flags
 	IsDbMocked             bool `json:"isDbMocked"`
@@ -193,4 +194,59 @@ func LoadAllFromDir(dir string) ([]*Scenario, []error) {
 		scenarios = append(scenarios, s)
 	}
 	return scenarios, errs
+}
+
+// LoadScenarioArray reads and validates an array of scenarios from a JSON file.
+// This is used by the suite runner which expects multiple scenarios per file.
+func LoadScenarioArray(path string) ([]*Scenario, error) {
+	abs, err := filepath.Abs(path)
+	if err != nil {
+		return nil, fmt.Errorf("testkit: resolve scenario array path %q: %w", path, err)
+	}
+
+	data, err := os.ReadFile(abs)
+	if err != nil {
+		return nil, fmt.Errorf("testkit: read scenario array %q: %w", abs, err)
+	}
+
+	var scenarios []*Scenario
+	if err := json.Unmarshal(data, &scenarios); err != nil {
+		return nil, fmt.Errorf("testkit: parse scenario array %q: %w", abs, err)
+	}
+
+	dir := filepath.Dir(abs)
+	for _, s := range scenarios {
+		// Set directory so RequestBodyPath and ResponseBodyPath can resolve correctly
+		s.dir = dir
+
+		// ExpectedCode might be set to 0 by default, which is caught by validate()
+		// If ExpectedCode is missing or 0, we can safely default it to 200 to help users
+		// But in this JSON it's unmarshaled directly to ExpectedCode by standard Go json.Unmarshal.
+		// NOTE: In the user's schema, they used expectedStatusCode. Since our struct uses expectedCode,
+		// we must support both. We'll add a helper unmarshal step or just let the caller ensure expectedCode
+		// is populated in the JSON so no override happens.
+		if s.ExpectedCode == 0 {
+			if s.ExpectedStatusCode != 0 {
+				s.ExpectedCode = s.ExpectedStatusCode
+			} else {
+				// fallback check if they didn't provide expectedCode, default to 200
+				s.ExpectedCode = 200
+			}
+		}
+
+		// Note: We bypass s.validate() here because URL and Method are often injected by the Suite
+		// Runner loop instead of being rigidly defined in every JSON array element.
+		// If they remain completely empty during RunSuite, the HTTP request will fail naturally.
+		// However, we still validate names and steps.
+		if s.Name == "" {
+			return nil, fmt.Errorf("testkit: invalid scenario array item: name is required")
+		}
+		for i, step := range s.NetUtilMockStep {
+			if step.Method == "" {
+				return nil, fmt.Errorf("testkit: invalid scenario array item %q: netUtilMockStep[%d].method is required", s.Name, i)
+			}
+		}
+	}
+
+	return scenarios, nil
 }

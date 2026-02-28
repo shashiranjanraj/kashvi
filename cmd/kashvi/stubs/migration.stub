@@ -1,0 +1,13 @@
+package migrations
+
+import (
+	"github.com/shashiranjanraj/kashvi/pkg/migration"
+	"gorm.io/gorm"
+)
+
+func init() { migration.Register("{{.Name}}", &{{.StructName}}{}) }
+
+type {{.StructName}} struct{}
+
+func (m *{{.StructName}}) Up(db *gorm.DB) error   { return nil }
+func (m *{{.StructName}}) Down(db *gorm.DB) error { return nil }

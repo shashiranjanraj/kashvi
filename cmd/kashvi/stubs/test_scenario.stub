@@ -1,0 +1,27 @@
+[
+  {
+    "name": "Test{{.Name}}CreateSuccess",
+    "description": "Verify successful creation of a {{.Name}}",
+    "requestUrl": "/{{.Lower}}s",
+    "requestMethod": "POST",
+    "requestFileName": "{{.Lower}}_create_req.json",
+    "responseFileName": "{{.Lower}}_create_res.json",
+    "expectedStatusCode": 201,
+    "isMockRequired": false{{ if .Authorize }},
+    "headers": {
+      "Authorization": "Bearer dummy-jwt-token"
+    }{{ end }}
+  },
+  {
+    "name": "Test{{.Name}}GetSuccess",
+    "description": "Verify fetching {{.Name}} by ID",
+    "requestUrl": "/{{.Lower}}s/1",
+    "requestMethod": "GET",
+    "responseFileName": "{{.Lower}}_get_res.json",
+    "expectedStatusCode": 200,
+    "isMockRequired": false{{ if .Authorize }},
+    "headers": {
+      "Authorization": "Bearer dummy-jwt-token"
+    }{{ end }}
+  }
+]

@@ -17,7 +17,11 @@ var makeModelCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		return writeStub(fmt.Sprintf("app/models/%s.go", strings.ToLower(name)), modelStub(name))
+		content, err := renderStub("model", StubData{Name: name, Lower: strings.ToLower(name)})
+		if err != nil {
+			return err
+		}
+		return writeStub(fmt.Sprintf("app/models/%s.go", strings.ToLower(name)), content)
 	},
 }
 
@@ -27,7 +31,11 @@ var makeControllerCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		return writeStub(fmt.Sprintf("app/controllers/%s.go", strings.ToLower(name)), controllerStub(name))
+		content, err := renderStub("controller", StubData{Name: name, Lower: strings.ToLower(name)})
+		if err != nil {
+			return err
+		}
+		return writeStub(fmt.Sprintf("app/controllers/%s.go", strings.ToLower(name)), content)
 	},
 }
 
@@ -37,7 +45,11 @@ var makeServiceCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		return writeStub(fmt.Sprintf("app/services/%s.go", strings.ToLower(name)), serviceStub(name))
+		content, err := renderStub("service", StubData{Name: name, Lower: strings.ToLower(name)})
+		if err != nil {
+			return err
+		}
+		return writeStub(fmt.Sprintf("app/services/%s.go", strings.ToLower(name)), content)
 	},
 }
 
@@ -49,7 +61,12 @@ var makeMigrationCmd = &cobra.Command{
 		ts := time.Now().Format("20060102150405")
 		slug := strings.ToLower(strings.ReplaceAll(args[0], " ", "_"))
 		name := fmt.Sprintf("%s_%s", ts, slug)
-		return writeStub(fmt.Sprintf("database/migrations/%s.go", name), migrationStub(name))
+		structName := "M_" + name
+		content, err := renderStub("migration", StubData{Name: name, StructName: structName})
+		if err != nil {
+			return err
+		}
+		return writeStub(fmt.Sprintf("database/migrations/%s.go", name), content)
 	},
 }
 
@@ -59,29 +76,60 @@ var makeSeederCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		return writeStub(fmt.Sprintf("database/seeders/%s.go", strings.ToLower(name)), seederStub(name))
+		content, err := renderStub("seeder", StubData{Name: name, Lower: strings.ToLower(name)})
+		if err != nil {
+			return err
+		}
+		return writeStub(fmt.Sprintf("database/seeders/%s.go", strings.ToLower(name)), content)
 	},
 }
 
 // kashvi make:resource — one command to scaffold a complete CRUD resource.
+// Users requested `kashvi make:crud` alias with flags. We update this resource command to match.
 var makeResourceCmd = &cobra.Command{
-	Use:   "make:resource [Name]",
-	Short: "Scaffold a full CRUD resource (model + controller + migration + seeder)",
-	Args:  cobra.ExactArgs(1),
+	Use:     "make:resource [Name]",
+	Aliases: []string{"make:crud"},
+	Short:   "Scaffold a full CRUD resource (model + controller + service + test + migration + seeder)",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
 		lower := strings.ToLower(name)
 		ts := time.Now().Format("20060102150405")
 
+		// Parse boolean flags added via init
+		authorize, _ := cmd.Flags().GetBool("authorize")
+		cache, _ := cmd.Flags().GetBool("cache")
+
+		data := StubData{
+			Name:      name,
+			Lower:     lower,
+			Authorize: authorize,
+			Cache:     cache,
+		}
+
+		// Pre-render content
+		mdl, _ := renderStub("model", data)
+		ctrl, _ := renderStub("controller", data)
+		svc, _ := renderStub("service", StubData{Name: name + "Service", Lower: lower + "service"})
+
+		migName := fmt.Sprintf("%s_create_%ss_table", ts, lower)
+		mig, _ := renderStub("migration", StubData{Name: migName, StructName: "M_" + migName})
+		sdr, _ := renderStub("seeder", StubData{Name: name + "Seeder"})
+
+		// Add automated testcase generator
+		testScen, _ := renderStub("test_scenario", data)
+
 		type spec struct{ path, content string }
 		files := []spec{
-			{fmt.Sprintf("app/models/%s.go", lower), modelStub(name)},
-			{fmt.Sprintf("app/controllers/%s_controller.go", lower), resourceControllerStub(name)},
-			{fmt.Sprintf("app/services/%s_service.go", lower), serviceStub(name + "Service")},
-			{fmt.Sprintf("database/migrations/%s_create_%ss_table.go", ts, lower),
-				migrationStub(fmt.Sprintf("%s_create_%ss_table", ts, lower))},
-			{fmt.Sprintf("database/seeders/%s_seeder.go", lower), seederStub(name + "Seeder")},
+			{fmt.Sprintf("app/models/%s.go", lower), mdl},
+			{fmt.Sprintf("app/controllers/%s_controller.go", lower), ctrl},
+			{fmt.Sprintf("app/services/%s_service.go", lower), svc},
+			{fmt.Sprintf("database/migrations/%s.go", migName), mig},
+			{fmt.Sprintf("database/seeders/%s_seeder.go", lower), sdr},
+			// Test scenarios standard layout
+			{fmt.Sprintf("testdata/%s_scenarios.json", lower), testScen},
 		}
+
 		for _, f := range files {
 			if err := writeStub(f.path, f.content); err != nil {
 				return err
@@ -90,13 +138,24 @@ var makeResourceCmd = &cobra.Command{
 
 		fmt.Printf("\n📋  Add to app/routes/api.go:\n\n")
 		fmt.Printf("    ctrl := controllers.New%sController()\n", name)
-		fmt.Printf("    api.Get(\"/%ss\",         \"%s.index\",   ctx.Wrap(ctrl.Index))\n", lower, lower)
-		fmt.Printf("    api.Post(\"/%ss\",        \"%s.store\",   ctx.Wrap(ctrl.Store))\n", lower, lower)
-		fmt.Printf("    api.Get(\"/%ss/{id}\",    \"%s.show\",    ctx.Wrap(ctrl.Show))\n", lower, lower)
-		fmt.Printf("    api.Put(\"/%ss/{id}\",    \"%s.update\",  ctx.Wrap(ctrl.Update))\n", lower, lower)
-		fmt.Printf("    api.Delete(\"/%ss/{id}\", \"%s.destroy\", ctx.Wrap(ctrl.Destroy))\n\n", lower, lower)
+
+		middle := ""
+		if authorize {
+			middle = ", middlewares.Auth()"
+		}
+
+		fmt.Printf("    api.Get(\"/%ss\",         \"%s.index\",   ctx.Wrap(ctrl.Index)%s)\n", lower, lower, middle)
+		fmt.Printf("    api.Post(\"/%ss\",        \"%s.store\",   ctx.Wrap(ctrl.Store)%s)\n", lower, lower, middle)
+		fmt.Printf("    api.Get(\"/%ss/{id}\",    \"%s.show\",    ctx.Wrap(ctrl.Show)%s)\n", lower, lower, middle)
+		fmt.Printf("    api.Put(\"/%ss/{id}\",    \"%s.update\",  ctx.Wrap(ctrl.Update)%s)\n", lower, lower, middle)
+		fmt.Printf("    api.Delete(\"/%ss/{id}\", \"%s.destroy\", ctx.Wrap(ctrl.Destroy)%s)\n\n", lower, lower, middle)
 		return nil
 	},
+}
+
+func init() {
+	makeResourceCmd.Flags().Bool("authorize", false, "Add authentication middleware placeholders")
+	makeResourceCmd.Flags().Bool("cache", false, "Add caching mechanisms to generated boilerplate")
 }
 
 // ─── writeStub ────────────────────────────────────────────────────────────────
@@ -114,120 +173,4 @@ func writeStub(path, content string) error {
 	}
 	fmt.Printf("✅  Created: %s\n", path)
 	return nil
-}
-
-// ─── Stubs ────────────────────────────────────────────────────────────────────
-
-func modelStub(name string) string {
-	return fmt.Sprintf(`package models
-
-import "gorm.io/gorm"
-
-type %s struct {
-	gorm.Model
-}
-`, name)
-}
-
-func controllerStub(name string) string {
-	return fmt.Sprintf(`package controllers
-
-import "net/http"
-
-type %s struct{}
-
-func New%s() *%s { return &%s{} }
-
-func (c *%s) Index(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("TODO: %s.Index"))
-}
-`, name, name, name, name, name, name)
-}
-
-func resourceControllerStub(name string) string {
-	lower := strings.ToLower(name)
-	return fmt.Sprintf(`package controllers
-
-import (
-	"net/http"
-
-	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
-)
-
-type %sController struct{}
-
-func New%sController() *%sController { return &%sController{} }
-
-// GET /%ss
-func (c *%sController) Index(ctx *appctx.Context) {
-	ctx.Success([]map[string]any{})
-}
-
-// POST /%ss
-func (c *%sController) Store(ctx *appctx.Context) {
-	var input struct{}
-	if !ctx.BindJSON(&input) { return }
-	ctx.Created(map[string]any{"message": "%s created"})
-}
-
-// GET /%ss/{id}
-func (c *%sController) Show(ctx *appctx.Context) {
-	ctx.Success(map[string]any{"id": ctx.Param("id")})
-}
-
-// PUT /%ss/{id}
-func (c *%sController) Update(ctx *appctx.Context) {
-	var input struct{}
-	if !ctx.BindJSON(&input) { return }
-	ctx.Success(map[string]any{"id": ctx.Param("id"), "updated": true})
-}
-
-// DELETE /%ss/{id}
-func (c *%sController) Destroy(ctx *appctx.Context) {
-	ctx.Status(http.StatusNoContent)
-}
-`,
-		name, name, name, name,
-		lower, name,
-		lower, name, name,
-		lower, name,
-		lower, name,
-		lower, name,
-	)
-}
-
-func serviceStub(name string) string {
-	return fmt.Sprintf(`package services
-
-type %s struct{}
-
-func New%s() *%s { return &%s{} }
-`, name, name, name, name)
-}
-
-func migrationStub(name string) string {
-	structName := "M_" + name
-	return fmt.Sprintf(`package migrations
-
-import (
-	"github.com/shashiranjanraj/kashvi/pkg/migration"
-	"gorm.io/gorm"
-)
-
-func init() { migration.Register("%s", &%s{}) }
-
-type %s struct{}
-
-func (m *%s) Up(db *gorm.DB) error   { return nil }
-func (m *%s) Down(db *gorm.DB) error { return nil }
-`, name, structName, structName, structName, structName)
-}
-
-func seederStub(name string) string {
-	return fmt.Sprintf(`package seeders
-
-import "gorm.io/gorm"
-
-func %s(db *gorm.DB) error { return nil }
-`, name)
 }

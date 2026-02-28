@@ -11,24 +11,13 @@ package main
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
-
-	"github.com/shashiranjanraj/kashvi/config"
-	_ "github.com/shashiranjanraj/kashvi/database/migrations"
-	"github.com/shashiranjanraj/kashvi/pkg/database"
-	"github.com/shashiranjanraj/kashvi/pkg/migration"
 )
 
-// bootDBDirect loads config and opens the database connection.
-// Used only in framework-self mode.
-func bootDBDirect() error {
-	if err := config.Load(); err != nil {
-		return err
-	}
-	// The blank import of database/migrations registers all migrations via init().
-	return database.Connect()
-}
+// runInProject executes the given subcommand in the user's project directory
+// Note: the implementation is expected to live in cmd_delegate.go or similar
 
 // kashvi migrate
 var migrateCmd = &cobra.Command{
@@ -38,11 +27,9 @@ var migrateCmd = &cobra.Command{
 		if !isFrameworkSelf() {
 			return runInProject("migrate")
 		}
-		if err := bootDBDirect(); err != nil {
-			return err
-		}
-		fmt.Println("Running migrations…")
-		return migration.New(database.DB).Run()
+		fmt.Println("kashvi migrate can only be run inside a Kashvi project directory.")
+		os.Exit(1)
+		return nil
 	},
 }
 
@@ -54,11 +41,9 @@ var migrateRollbackCmd = &cobra.Command{
 		if !isFrameworkSelf() {
 			return runInProject("migrate:rollback")
 		}
-		if err := bootDBDirect(); err != nil {
-			return err
-		}
-		fmt.Println("Rolling back last batch…")
-		return migration.New(database.DB).Rollback()
+		fmt.Println("kashvi migrate:rollback can only be run inside a Kashvi project directory.")
+		os.Exit(1)
+		return nil
 	},
 }
 
@@ -70,10 +55,9 @@ var migrateStatusCmd = &cobra.Command{
 		if !isFrameworkSelf() {
 			return runInProject("migrate:status")
 		}
-		if err := bootDBDirect(); err != nil {
-			return err
-		}
-		return migration.New(database.DB).Status()
+		fmt.Println("kashvi migrate:status can only be run inside a Kashvi project directory.")
+		os.Exit(1)
+		return nil
 	},
 }
 
@@ -82,7 +66,12 @@ var seedCmd = &cobra.Command{
 	Use:   "seed",
 	Short: "Run all database seeders",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		// Always delegate to project — the global CLI binary has no project seeders.
-		return runInProject("seed")
+		// Always delegate to project
+		if !isFrameworkSelf() {
+			return runInProject("seed")
+		}
+		fmt.Println("kashvi seed can only be run inside a Kashvi project directory.")
+		os.Exit(1)
+		return nil
 	},
 }

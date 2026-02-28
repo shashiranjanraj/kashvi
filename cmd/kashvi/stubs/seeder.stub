@@ -1,0 +1,5 @@
+package seeders
+
+import "gorm.io/gorm"
+
+func {{.Name}}(db *gorm.DB) error { return nil }

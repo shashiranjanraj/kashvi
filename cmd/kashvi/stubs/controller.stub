@@ -1,0 +1,45 @@
+package controllers
+
+import (
+	"net/http"
+	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
+)
+
+type {{.Name}}Controller struct{}
+
+func New{{.Name}}Controller() *{{.Name}}Controller { return &{{.Name}}Controller{} }
+
+// GET /{{.Lower}}s
+func (c *{{.Name}}Controller) Index(ctx *appctx.Context) {
+    {{ if .Cache }}
+    // TODO: implement caching logic
+    {{ end }}
+	ctx.Success([]map[string]any{})
+}
+
+// POST /{{.Lower}}s
+func (c *{{.Name}}Controller) Store(ctx *appctx.Context) {
+	var input struct{}
+	if !ctx.BindJSON(&input) { return }
+	ctx.Created(map[string]any{"message": "{{.Name}} created"})
+}
+
+// GET /{{.Lower}}s/{id}
+func (c *{{.Name}}Controller) Show(ctx *appctx.Context) {
+    {{ if .Cache }}
+    // TODO: implement caching logic
+    {{ end }}
+	ctx.Success(map[string]any{"id": ctx.Param("id")})
+}
+
+// PUT /{{.Lower}}s/{id}
+func (c *{{.Name}}Controller) Update(ctx *appctx.Context) {
+	var input struct{}
+	if !ctx.BindJSON(&input) { return }
+	ctx.Success(map[string]any{"id": ctx.Param("id"), "updated": true})
+}
+
+// DELETE /{{.Lower}}s/{id}
+func (c *{{.Name}}Controller) Destroy(ctx *appctx.Context) {
+	ctx.Status(http.StatusNoContent)
+}
