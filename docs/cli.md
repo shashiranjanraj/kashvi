@@ -112,13 +112,23 @@ kashvi schedule:run
 
 ## Scaffold Commands
 
-All scaffold commands create files in your project. They will **not overwrite** existing files.
+All scaffold commands create files in your project using a built-in `text/template` engine. They will **not overwrite** existing files.
 
-### `kashvi make:resource [Name]`
+### Template Overrides
+You can customize the boilerplates for all scaffolding commands by mirroring the framework's `.stub` files into your project's `.kashvi/stubs/` directory.
+
+```bash
+mkdir -p .kashvi/stubs
+# create .kashvi/stubs/model.stub to override the default model template
+```
+
+Available customizable stubs include: `model.stub`, `controller.stub`, `service.stub`, `migration.stub`, `seeder.stub`, and `test_scenario.stub`.
+
+### `kashvi make:resource [Name]` (alias: `make:crud`)
 **Most useful command.** Scaffolds a complete CRUD resource in one shot.
 
 ```bash
-kashvi make:resource Post
+kashvi make:crud Post --authorize --cache
 ```
 
 Creates:
@@ -127,8 +137,13 @@ Creates:
 - `app/services/postService_service.go`
 - `database/migrations/TIMESTAMP_create_posts_table.go`
 - `database/seeders/post_seeder.go`
+- `testdata/post_scenarios.json` (Automated API tests)
 
-And prints the exact route lines to add to `api.go`.
+Flags:
+- `--authorize`: Injects standard Authentication router middleware and mocks JWT headers into the generated `test_scenario`.
+- `--cache`: Adds caching template placeholders throughout the generated controller functions.
+
+Prints the exact route lines to add to `api.go` with injected middleware flags accounted for.
 
 ---
 

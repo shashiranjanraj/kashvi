@@ -8,10 +8,15 @@
 
 ---
 
-## 1. Clone and install
-
 ```bash
-git clone https://github.com/shashiranjanraj/kashvi
+# 1. Initialize a new Go project
+mkdir my-app && cd my-app
+go mod init my-app
+
+# 2. Install Kashvi framework & CLI
+go get github.com/shashiranjanraj/kashvi
+go install github.com/shashiranjanraj/kashvi/cmd/kashvi@latest
+```
 cd kashvi
 
 # Install the CLI tool
@@ -44,46 +49,10 @@ DATABASE_DSN=kashvi.db
 
 ---
 
-## 3. Run migrations
+## 3. Scaffold your first resource
 
 ```bash
-kashvi migrate
-```
-
----
-
-## 4. Start the server
-
-```bash
-kashvi run
-# → 🚀 Kashvi running on :8080  [env: local]
-```
-
----
-
-## 5. First API call
-
-```bash
-# Register a user
-curl -X POST http://localhost:8080/api/register \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Alice","email":"alice@example.com","password":"secret123","password_confirm":"secret123"}'
-
-# Login
-curl -X POST http://localhost:8080/api/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"alice@example.com","password":"secret123"}'
-
-# Health check
-curl http://localhost:8080/api/health
-```
-
----
-
-## 6. Scaffold your first resource
-
-```bash
-kashvi make:resource Post
+kashvi make:crud Post --authorize
 ```
 
 This generates:
@@ -93,7 +62,7 @@ This generates:
 - `database/migrations/TIMESTAMP_create_posts_table.go`
 - `database/seeders/post_seeder.go`
 
-Then add the routes (the command prints exactly what to paste), migrate, and run:
+Then add the routes (the command prints exactly what to paste explicitly), migrate the database, and run your new server!
 
 ```bash
 kashvi migrate
@@ -102,26 +71,23 @@ kashvi run
 
 ---
 
-## Project Structure
+## Project Structure Overview
 
-```
-kashvi/
+Kashvi strictly executes your project structures based on standard MVC formats automatically scaffolded via the CLI tools:
+my-app/
 ├── app/
 │   ├── controllers/     # HTTP handlers
 │   ├── models/          # GORM models
 │   ├── routes/          # api.go — register all routes here
 │   └── services/        # Business logic layer
-├── cmd/kashvi/          # CLI entrypoint (main + subcommands)
-├── config/              # Env + JSON config loader
+├── cmd/
+│   └── server/          # Boot sequence + graceful shutdown
+├── config/              # Env + JSON config loaders generated
 ├── database/
 │   ├── migrations/      # Migration files (register in init())
 │   └── seeders/         # Seed data + RunAll runner
-├── internal/
-│   ├── kernel/          # HTTP middleware stack wiring
-│   └── server/          # Boot sequence + graceful shutdown
-└── pkg/                 # All reusable packages
-    ├── auth/  bind/  cache/  ctx/  database/  logger/
-    ├── metrics/  middleware/  migration/  orm/
-    ├── queue/  reqid/  response/  router/  schedule/
-    ├── session/  sse/  storage/  validate/  ws/
+├── testdata/            # testkit automated testing scenarios
+├── .kashvi/
+│   └── stubs/           # your custom make:crud CLI boilerplate templates
+└── main.go              # project entry
 ```

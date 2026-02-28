@@ -25,6 +25,42 @@ func TestAPI(t *testing.T) {
 }
 ```
 
+## Data-Driven Test Suites
+
+To execute multiple APIs spanning different isolated environments and handler overrides seamlessly instead of loading individual directory targets, `RunSuite` provides a Master Configuration approach driven entirely through JSON.
+
+```go
+func TestSuiteRun(t *testing.T) {
+	// A map translating string identifiers in your config map into live Handler pointers
+	handlers := map[string]http.HandlerFunc{
+		"HandlerShipmentTracking":  api.ShipmentTrackingController,
+		"HandlerBillingProcessing": api.BillingController,
+	}
+
+	// Loads and executes the testing Master Config definition JSON 
+	testkit.RunSuite(t, "testdata/test_scenarios_master.json", handlers)
+}
+```
+
+### Master Configuration Schema
+
+The file supplied (`test_scenarios_master.json`) defines arrayed routes linking their respective URLs to handler implementations and target scenario specifications.
+
+```json
+[
+  {
+    "serviceName": "ShipmentTracking",
+    "httpMethodType": "POST",
+    "servicePath": "/api/v1/shipments/track",
+    "filePath": "testdata/shipments",
+    "scenariosFileName": "shipment_tracking_scenarios.json",
+    "handlerName": "HandlerShipmentTracking"
+  }
+]
+```
+
+When parsed, TestKit loops across the specifications, injecting the proper URL and handler data onto dynamic mock routes to safely simulate full end-to-end framework testing directly mapped to isolated logic scenarios.
+
 ---
 
 ## Scenario JSON schema
@@ -145,6 +181,9 @@ testkit.Run(t, handler, "testdata/create_user.json")
 
 // Run all *.json files in a directory as subtests
 testkit.RunDir(t, handler, "testdata")
+
+// Run all array-based scenarios defined in a Master Configuration array via dynamically mapped handlers
+testkit.RunSuite(t, "testdata/test_scenarios.json", handlersMap)
 ```
 
 **Lifecycle per scenario:**
