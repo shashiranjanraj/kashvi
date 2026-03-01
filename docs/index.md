@@ -1,55 +1,41 @@
-# Kashvi Framework Documentation
+# Kashvi Documentation
 
-> **Fast like Go, Elegant like Laravel — built with love for Kashvi ❤️**
+Kashvi is a Laravel-inspired Go framework focused on practical defaults: routing, middleware, auth, ORM helpers, migrations, queue workers, scheduler, storage, and testing support in one codebase.
 
-Kashvi is a batteries-included Go web framework. It gives you everything you need to build a production API **in a single binary** — no boilerplate, no magic.
+## Start Here
 
----
+1. [Installation & Quick Start](./installation.md)
+2. [CRUD Walkthrough](./crud.md)
+3. [CLI Reference](./cli.md)
 
-## Documentation Index
+## Core Guides
 
-| Guide | Description |
+| Guide | What you learn |
 |---|---|
-| [Installation & Quick Start](./installation.md) | Setup, requirements, first server |
-| [Configuration](./configuration.md) | `.env`, `config/app.json`, all env vars |
-| [Routing](./routing.md) | Routes, groups, named routes, `route:list` |
-| [Context API](./context.md) | `ctx.Context` — request helpers, responses, binding |
-| [Middleware](./middleware.md) | Built-in middleware, custom middleware, ordering |
-| [Validation](./validation.md) | All 28 rules, custom rules, struct tagging |
-| [Authentication](./auth.md) | JWT tokens, bcrypt, RBAC role guards |
-| [ORM & Database](./orm.md) | Query builder, pagination, relationships, parallel queries |
-| [Migrations & Seeders](./migrations.md) | Up/Down/Rollback/Status, seeder runner |
-| [Queue & Jobs](./queue.md) | In-memory + Redis driver, retries, delayed jobs, failed jobs |
-| [Task Scheduler](./scheduler.md) | Cron jobs, overlap guard, hooks |
-| [Storage](./storage.md) | Local disk, S3/MinIO/R2, `Disk` interface |
-| [Cache](./cache.md) | Redis, Get/Set/Forget, ORM cache bridge |
-| [WebSocket & SSE](./websocket.md) | `pkg/ws` Hub/Client, `pkg/sse` stream |
-| [CLI Reference](./cli.md) | All `kashvi` commands |
+| [Configuration](./configuration.md) | `.env` and `config/app.json` loading and defaults |
+| [Routing](./routing.md) | Named routes, groups, per-route middleware, route listing |
+| [Context API](./context.md) | Request parsing, validation, JSON/file responses |
+| [Validation](./validation.md) | Validation tags and error handling flow |
+| [Authentication](./auth.md) | JWT helpers and role-based access flow |
+| [ORM & Database](./orm.md) | Query builder API, pagination, parallel queries |
+| [Migrations](./migrations.md) | Registering migrations and lifecycle commands |
 
----
+## Runtime Systems
 
-## Quick Taste
+| Guide | What you learn |
+|---|---|
+| [Queue](./queue.md) | Background jobs, retries, delayed jobs, failed jobs |
+| [Worker Pool](./workerpool.md) | Bounded concurrency for CPU/IO workloads |
+| [Storage](./storage.md) | Local/S3-compatible disk abstraction |
+| [WebSocket & SSE](./websocket.md) | Realtime events over WS and server-sent events |
+| [gRPC](./grpc.md) | Running standalone gRPC server with health checks |
+| [Logging](./logging.md) | Structured logs and optional MongoDB sink |
+| [TestKit](./testkit.md) | Scenario-based API testing helpers |
 
-```go
-// app/controllers/post_controller.go
-func (c *PostController) Store(ctx *appctx.Context) {
-    var input struct {
-        Title string `json:"title" validate:"required,min=3"`
-        Body  string `json:"body"  validate:"required"`
-    }
-    if !ctx.BindJSON(&input) { // auto 422 on fail
-        return
-    }
+## Suggested Learning Path
 
-    post := models.Post{Title: input.Title, Body: input.Body}
-    orm.New(database.DB).Create(&post)
-    ctx.Created(post)
-}
-```
-
-```bash
-# One command to scaffold a full resource
-kashvi make:resource Post
-kashvi migrate
-kashvi run
-```
+1. Complete [Installation & Quick Start](./installation.md).
+2. Follow [CRUD Walkthrough](./crud.md) end-to-end.
+3. Open [Routing](./routing.md), [Context API](./context.md), and [Validation](./validation.md) together when building handlers.
+4. Add background processing with [Queue](./queue.md) and [Worker Pool](./workerpool.md).
+5. Expand infrastructure with [Storage](./storage.md), [gRPC](./grpc.md), and [Logging](./logging.md).

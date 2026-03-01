@@ -1,93 +1,107 @@
 # Installation & Quick Start
 
+This guide sets up a new Kashvi project from zero to a running server.
+
 ## Requirements
 
-- Go 1.21+
-- (Optional) Redis — for sessions, cache, queue
-- (Optional) PostgreSQL / MySQL / SQLite — default is SQLite
+- Go `1.25+` (matches this framework's `go.mod`)
+- Optional: Redis (session, queue, cache features)
+- Optional: Postgres/MySQL/SQL Server (SQLite works by default)
 
----
+## Step 1: Install the CLI
+
+Install the global `kashvi` command once:
 
 ```bash
-# 1. Initialize a new Go project
-mkdir my-app && cd my-app
-go mod init my-app
-
-# 2. Install Kashvi framework & CLI
-go get github.com/shashiranjanraj/kashvi
 go install github.com/shashiranjanraj/kashvi/cmd/kashvi@latest
-```
-cd kashvi
-
-# Install the CLI tool
-make install     # runs: go install ./cmd/kashvi
-```
-
-Verify:
-```bash
 kashvi --help
 ```
 
----
-
-## 2. Configure environment
-
-Copy the example env file and edit it:
+If you are developing the framework repository itself, you can also run:
 
 ```bash
-cp .env.example .env
+make install
 ```
 
-Minimum required for development:
+## Step 2: Create a project
+
+```bash
+mkdir my-app
+cd my-app
+go mod init my-app
+go get github.com/shashiranjanraj/kashvi
+```
+
+Create `main.go`:
+
+```go
+package main
+
+import (
+	"github.com/shashiranjanraj/kashvi/pkg/app"
+	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
+	"github.com/shashiranjanraj/kashvi/pkg/router"
+)
+
+func main() {
+	app.New().
+		Routes(func(r *router.Router) {
+			r.Get("/health", "health", appctx.Wrap(func(c *appctx.Context) {
+				c.Success(map[string]any{"ok": true})
+			}))
+		}).
+		Run()
+}
+```
+
+## Step 3: Add environment config
+
+Create `.env`:
+
 ```ini
 APP_ENV=local
 APP_PORT=8080
-JWT_SECRET=any-long-random-string
+JWT_SECRET=replace-with-long-random-secret
+
 DB_DRIVER=sqlite
 DATABASE_DSN=kashvi.db
+
+REDIS_ADDR=localhost:6379
+REDIS_PASSWORD=
 ```
 
----
+Notes:
+- `DB_DRIVER` supports: `sqlite`, `postgres`, `mysql`, `sqlserver`.
+- Kashvi reads both `config/app.json` and `.env` (then applies defaults).
 
-## 3. Scaffold your first resource
+## Step 4: Run the app
+
+From the project directory:
 
 ```bash
-kashvi make:crud Post --authorize
+kashvi serve
 ```
 
-This generates:
-- `app/models/post.go`
-- `app/controllers/post_controller.go` (full CRUD with `ctx.Context`)
-- `app/services/postService_service.go`
-- `database/migrations/TIMESTAMP_create_posts_table.go`
-- `database/seeders/post_seeder.go`
+The CLI delegates to your project entrypoint (`go run . serve`), so your own routes/migrations/seeders are used.
 
-Then add the routes (the command prints exactly what to paste explicitly), migrate the database, and run your new server!
+Quick checks:
+
+```bash
+curl http://localhost:8080/health
+kashvi route:list
+```
+
+## Step 5: Add your first resource
+
+```bash
+kashvi make:crud Post
+```
+
+This generates model/controller/service/migration/seeder/test-scenario files. Then:
 
 ```bash
 kashvi migrate
-kashvi run
+kashvi serve
 ```
 
----
-
-## Project Structure Overview
-
-Kashvi strictly executes your project structures based on standard MVC formats automatically scaffolded via the CLI tools:
-my-app/
-├── app/
-│   ├── controllers/     # HTTP handlers
-│   ├── models/          # GORM models
-│   ├── routes/          # api.go — register all routes here
-│   └── services/        # Business logic layer
-├── cmd/
-│   └── server/          # Boot sequence + graceful shutdown
-├── config/              # Env + JSON config loaders generated
-├── database/
-│   ├── migrations/      # Migration files (register in init())
-│   └── seeders/         # Seed data + RunAll runner
-├── testdata/            # testkit automated testing scenarios
-├── .kashvi/
-│   └── stubs/           # your custom make:crud CLI boilerplate templates
-└── main.go              # project entry
-```
+For full resource wiring and CRUD API flow, continue to [CRUD Walkthrough](./crud.md).

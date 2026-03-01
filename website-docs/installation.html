@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Installation - Kashvi Docs</title>
+  <meta name="description" content="Install and quick start Kashvi framework.">
+  <link rel="stylesheet" href="assets/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <a class="brand" href="index.html">Kashvi Docs</a>
+      <nav class="nav" aria-label="Primary">
+        <a data-nav href="index.html">Home</a>
+        <a data-nav href="installation.html">Installation</a>
+        <a data-nav href="crud.html">CRUD</a>
+        <a data-nav href="cli.html">CLI</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container main">
+    <section class="hero">
+      <h1>Installation &amp; Quick Start</h1>
+      <p class="lead">From zero project to running API in a few steps.</p>
+    </section>
+
+    <section>
+      <h2>Requirements</h2>
+      <ul>
+        <li>Go <code>1.25+</code></li>
+        <li>Optional: Redis for sessions/cache/queue</li>
+        <li>Optional: Postgres/MySQL/SQL Server (SQLite supported by default)</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>1. Install the CLI</h2>
+      <pre><code>go install github.com/shashiranjanraj/kashvi/cmd/kashvi@latest
+kashvi --help</code></pre>
+      <p>If you are inside the framework repo itself, you can also run <code>make install</code>.</p>
+    </section>
+
+    <section>
+      <h2>2. Create a Project</h2>
+      <pre><code>mkdir my-app
+cd my-app
+go mod init my-app
+go get github.com/shashiranjanraj/kashvi</code></pre>
+      <p>Create <code>main.go</code>:</p>
+      <pre><code>package main
+
+import (
+  "github.com/shashiranjanraj/kashvi/pkg/app"
+  appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
+  "github.com/shashiranjanraj/kashvi/pkg/router"
+)
+
+func main() {
+  app.New().
+    Routes(func(r *router.Router) {
+      r.Get("/health", "health", appctx.Wrap(func(c *appctx.Context) {
+        c.Success(map[string]any{"ok": true})
+      }))
+    }).
+    Run()
+}</code></pre>
+    </section>
+
+    <section>
+      <h2>3. Add Environment Configuration</h2>
+      <pre><code>APP_ENV=local
+APP_PORT=8080
+JWT_SECRET=replace-with-long-random-secret
+
+DB_DRIVER=sqlite
+DATABASE_DSN=kashvi.db
+
+REDIS_ADDR=localhost:6379
+REDIS_PASSWORD=</code></pre>
+      <p><code>DB_DRIVER</code> supports <code>sqlite</code>, <code>postgres</code>, <code>mysql</code>, <code>sqlserver</code>.</p>
+    </section>
+
+    <section>
+      <h2>4. Run and Verify</h2>
+      <pre><code>kashvi serve
+curl http://localhost:8080/health
+kashvi route:list</code></pre>
+      <p>In project mode, the CLI delegates to your app entrypoint: <code>go run . serve</code>.</p>
+    </section>
+
+    <section>
+      <h2>5. Generate First Resource</h2>
+      <pre><code>kashvi make:crud Post
+kashvi migrate
+kashvi serve</code></pre>
+      <a class="button" href="crud.html">Continue to CRUD Walkthrough</a>
+    </section>
+  </main>
+
+  <footer class="container footer">
+    <p>Copyright <span id="year"></span> Kashvi.</p>
+  </footer>
+
+  <script src="assets/site.js"></script>
+</body>
+</html>

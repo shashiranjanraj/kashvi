@@ -7,7 +7,7 @@ All commands are run via the `kashvi` binary. Install with `make install`.
 ## Server Commands
 
 ### `kashvi run`
-Start the HTTP server. Boots DB, Redis, storage, then listens forever until SIGINT/SIGTERM.
+Start the HTTP server (`serve` alias). In project mode this delegates to your app entrypoint (`go run . serve`).
 
 ```bash
 kashvi run
@@ -95,7 +95,7 @@ kashvi seed
 Start queue workers to process background jobs.
 
 ```bash
-kashvi queue:work           # default: 3 workers
+kashvi queue:work           # default: 5 workers
 kashvi queue:work -w 10     # 10 workers
 ```
 
@@ -134,7 +134,7 @@ kashvi make:crud Post --authorize --cache
 Creates:
 - `app/models/post.go`
 - `app/controllers/post_controller.go` (full CRUD using `ctx.Context`)
-- `app/services/postService_service.go`
+- `app/services/post_service.go`
 - `database/migrations/TIMESTAMP_create_posts_table.go`
 - `database/seeders/post_seeder.go`
 - `testdata/post_scenarios.json` (Automated API tests)
@@ -184,7 +184,7 @@ Scaffold a seeder function.
 
 ```bash
 kashvi make:seeder PostSeeder
-# Creates: database/seeders/postseeder.go
+# Creates: database/seeders/postseeder.go (name is lowercased)
 ```
 
 ---
