@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -7,6 +8,7 @@
   <meta name="description" content="Kashvi framework documentation website.">
   <link rel="stylesheet" href="assets/site.css">
 </head>
+
 <body>
   <header class="topbar">
     <div class="container topbar-inner">
@@ -14,6 +16,7 @@
       <nav class="nav" aria-label="Primary">
         <a data-nav href="index.html">Home</a>
         <a data-nav href="installation.html">Installation</a>
+        <a data-nav href="5-minute-crud.html">5-Min Quickstart</a>
         <a data-nav href="crud.html">CRUD</a>
         <a data-nav href="cli.html">CLI</a>
       </nav>
@@ -23,12 +26,18 @@
   <main class="container main">
     <section class="hero">
       <h1>Fast like Go, elegant like Laravel.</h1>
-      <p class="lead">Kashvi is a practical, batteries-included framework for APIs and services. This static website is ready to host directly on any static provider.</p>
+      <p class="lead">Kashvi is a practical, batteries-included framework for APIs and services. This static website is
+        ready to host directly on any static provider.</p>
       <a class="button" href="installation.html">Start with Installation</a>
       <a class="button alt" href="crud.html">Jump to CRUD</a>
     </section>
 
     <div class="grid">
+      <article class="card">
+        <h3>5-Minute Quickstart</h3>
+        <p>If you're a fresher or transitioning from Laravel, start here to build your first API.</p>
+        <a href="5-minute-crud.html">Open 5-Min CRUD</a>
+      </article>
       <article class="card">
         <h3>Install in Minutes</h3>
         <p>Global CLI install, project bootstrapping, and first health endpoint.</p>
@@ -55,13 +64,28 @@
       <h2>What Is Included</h2>
       <table>
         <thead>
-          <tr><th>Area</th><th>Highlights</th></tr>
+          <tr>
+            <th>Area</th>
+            <th>Highlights</th>
+          </tr>
         </thead>
         <tbody>
-          <tr><td>HTTP</td><td>Router, groups, named routes, middleware stack.</td></tr>
-          <tr><td>Data</td><td>GORM connection, query helpers, migrations, seeders.</td></tr>
-          <tr><td>Runtime</td><td>Queue workers, scheduler, cache bridge, storage abstraction.</td></tr>
-          <tr><td>Tooling</td><td>CLI generators, route listing, scenario-based testkit.</td></tr>
+          <tr>
+            <td>HTTP</td>
+            <td>Router, groups, named routes, middleware stack.</td>
+          </tr>
+          <tr>
+            <td>Data</td>
+            <td>GORM connection, query helpers, migrations, seeders.</td>
+          </tr>
+          <tr>
+            <td>Runtime</td>
+            <td>Queue workers, scheduler, cache bridge, storage abstraction.</td>
+          </tr>
+          <tr>
+            <td>Tooling</td>
+            <td>CLI generators, route listing, scenario-based testkit.</td>
+          </tr>
         </tbody>
       </table>
     </section>
@@ -73,4 +97,5 @@
 
   <script src="assets/site.js"></script>
 </body>
+
 </html>

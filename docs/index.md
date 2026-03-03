@@ -5,8 +5,9 @@ Kashvi is a Laravel-inspired Go framework focused on practical defaults: routing
 ## Start Here
 
 1. [Installation & Quick Start](./installation.md)
-2. [CRUD Walkthrough](./crud.md)
-3. [CLI Reference](./cli.md)
+2. [5-Minute CRUD Example](./5-minute-crud.md)
+3. [CRUD Walkthrough](./crud.md)
+4. [CLI Reference](./cli.md)
 
 ## Core Guides
 
@@ -35,7 +36,8 @@ Kashvi is a Laravel-inspired Go framework focused on practical defaults: routing
 ## Suggested Learning Path
 
 1. Complete [Installation & Quick Start](./installation.md).
-2. Follow [CRUD Walkthrough](./crud.md) end-to-end.
-3. Open [Routing](./routing.md), [Context API](./context.md), and [Validation](./validation.md) together when building handlers.
-4. Add background processing with [Queue](./queue.md) and [Worker Pool](./workerpool.md).
-5. Expand infrastructure with [Storage](./storage.md), [gRPC](./grpc.md), and [Logging](./logging.md).
+2. Go through the [5-Minute CRUD Example](./5-minute-crud.md) to understand the workflow.
+3. Follow [CRUD Walkthrough](./crud.md) end-to-end.
+4. Open [Routing](./routing.md), [Context API](./context.md), and [Validation](./validation.md) together when building handlers.
+5. Add background processing with [Queue](./queue.md) and [Worker Pool](./workerpool.md).
+6. Expand infrastructure with [Storage](./storage.md), [gRPC](./grpc.md), and [Logging](./logging.md).
