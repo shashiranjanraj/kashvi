@@ -7,19 +7,72 @@ Single binary, zero magic, production-ready out of the box.
 
 ---
 
-## Quick Start
+## ⚡ 1-Minute Quickstart
+
+Getting started is as simple as creating a brand new zero-dependency project:
 
 ```bash
-# Install the CLI
-make install          # or: go install ./cmd/kashvi
+# Install the Kashvi CLI globally
+go install github.com/shashiranjanraj/kashvi/cmd/kashvi@latest
 
-# Bootstrap a new project (already done for you in this repo)
-kashvi run            # start the HTTP server
+# Scaffold a new project (defaults to SQLite + Memory cache)
+kashvi new my-awesome-api
+
+# Start the server!
+cd my-awesome-api
+kashvi serve
 ```
 
 ---
 
-## Features
+## 🛠️ The 5-Minute CRUD API
+
+Let's build a `Tasks` API. Notice how fast it is when everything works together:
+
+**1. Scaffold the Resource**  
+Generate your Model, Controller, Migration, and Seeder in one command:
+```bash
+kashvi make:resource Task
+```
+
+**2. Define the Database Table**  
+Open `database/migrations/xxx_create_tasks_table.go` and add specific fields:
+```go
+table.String("title").NotNull()
+table.Boolean("is_completed").Default(false)
+```
+Run the migration: `kashvi migrate`
+
+**3. Write the Controller Logic**  
+Open `app/controllers/task_controller.go` to handle a `POST` request. Notice our built-in JSON validation and Context API:
+```go
+func (c *TaskController) Store(ctx *ctx.Context) {
+    var input struct {
+        Title string `json:"title" validate:"required,min=3"`
+    }
+    if !ctx.BindJSON(&input) { return } // Auto-returns 422 Bad Request if invalid
+
+    task := models.Task{Title: input.Title}
+    db.Save(&task)
+    
+    ctx.Created(task)
+}
+```
+
+**4. Register the Route**  
+Map the endpoint in `app/routes/api.go`:
+```go
+api.Post("/tasks", "tasks.store", ctx.Wrap(ctrl.Store))
+```
+
+**Done!** Test it instantly:
+```bash
+curl -X POST http://localhost:8080/api/tasks -d '{"title":"Learn Kashvi"}'
+```
+
+---
+
+## ✨ Why Kashvi?
 
 | Category | Feature |
 |---|---|
@@ -41,7 +94,7 @@ kashvi run            # start the HTTP server
 | **Logging** | `log/slog` — JSON in prod, text in dev, request-ID tagged, **MongoDB async log sink** |
 | **Worker Pool** | `pkg/workerpool` — bounded goroutine pool with backpressure (`ErrPoolFull`) |
 | **TestKit** | `pkg/testkit` — JSON-scenario-driven REST API tests with testify mocks |
-| **CLI** | `kashvi run`, `kashvi grpc:serve`, `kashvi route:list`, `kashvi migrate`, `kashvi make:resource`, ... |
+| **CLI** | `kashvi new`, `kashvi serve`, `kashvi make:resource`, `kashvi migrate`, ... |
 
 ---
 
@@ -261,25 +314,32 @@ kashvi/
 
 ---
 
-## Documentation
+## 📚 Documentation
 
+### The Basics
+*Everything you need to build standard APIs.*
 | Topic | File |
 |-------|------|
 | Routing | [docs/routing.md](docs/routing.md) |
 | Context API | [docs/context.md](docs/context.md) |
 | Validation | [docs/validation.md](docs/validation.md) |
-| ORM | [docs/orm.md](docs/orm.md) |
+| ORM & Database | [docs/orm.md](docs/orm.md) |
+| Migrations | [docs/migrations.md](docs/migrations.md) |
+
+### Digging Deeper
+*Advanced capabilities for large-scale systems.*
+| Topic | File |
+|-------|------|
 | Auth (JWT + RBAC) | [docs/auth.md](docs/auth.md) |
 | Queue & Jobs | [docs/queue.md](docs/queue.md) |
 | Storage | [docs/storage.md](docs/storage.md) |
 | WebSocket & SSE | [docs/websocket.md](docs/websocket.md) |
-| Migrations | [docs/migrations.md](docs/migrations.md) |
 | CLI Reference | [docs/cli.md](docs/cli.md) |
 | Configuration | [docs/configuration.md](docs/configuration.md) |
-| **gRPC Server** | [docs/grpc.md](docs/grpc.md) |
-| **MongoDB Logging** | [docs/logging.md](docs/logging.md) |
-| **Worker Pool** | [docs/workerpool.md](docs/workerpool.md) |
-| **TestKit** | [docs/testkit.md](docs/testkit.md) |
+| gRPC Server | [docs/grpc.md](docs/grpc.md) |
+| MongoDB Logging | [docs/logging.md](docs/logging.md) |
+| Worker Pool | [docs/workerpool.md](docs/workerpool.md) |
+| TestKit | [docs/testkit.md](docs/testkit.md) |
 
 ---
 
