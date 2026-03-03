@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>5-Minute CRUD Example - Kashvi Docs</title>
+    <meta name="description" content="Build a User CRUD API in Kashvi in under 5 minutes.">
+    <link rel="stylesheet" href="assets/site.css">
+</head>
+
+<body>
+    <header class="topbar">
+        <div class="container topbar-inner">
+            <a class="brand" href="index.html">Kashvi Docs</a>
+            <nav class="nav" aria-label="Primary">
+                <a data-nav href="index.html">Home</a>
+                <a data-nav href="installation.html">Installation</a>
+                <a data-nav href="crud.html">CRUD</a>
+                <a data-nav href="cli.html">CLI</a>
+                <a data-nav href="5-minute-crud.html" aria-current="page">5-Min Quickstart</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container main">
+        <section class="hero">
+            <h1>Building a User CRUD API (5 Minutes)</h1>
+            <p class="lead">If you're a fresher or transitioning from PHP/Laravel, you'll feel right at home. Let's
+                build a fully functional `User` API in just a few minutes.</p>
+        </section>
+
+        <section>
+            <h2>1. Create the Project</h2>
+            <p>First, scaffold a fresh project. This creates a ready-to-use folder structure for you.</p>
+            <pre><code>kashvi new my-api
+cd my-api</code></pre>
+            <p><em>(This command generates your <code>main.go</code>, <code>app/</code> folder for logic,
+                    <code>database/</code> for schemas, and a <code>.env</code> file pre-configured for SQLite so you
+                    don't need any complex database setup yet).</em></p>
+        </section>
+
+        <section>
+            <h2>2. Generate the Resource</h2>
+            <p>We need a Model, a Controller, a Migration, and a Seeder. Kashvi's CLI does it in one command:</p>
+            <pre><code>kashvi make:resource User</code></pre>
+            <ul>
+                <li><code>app/models/user.go</code>: Your data structure.</li>
+                <li><code>app/controllers/user_controller.go</code>: Where your API logic lives.</li>
+                <li><code>database/migrations/xxxx_create_users_table.go</code>: Instructions for creating the database
+                    table.</li>
+                <li><code>database/seeders/user_seeder.go</code>: A place to create fake users.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>3. Define the Database Table</h2>
+            <p>Let's tell the database what a "User" looks like. Open the newly generated migration file inside the
+                <code>database/migrations/</code> folder.</p>
+            <pre><code>// database/migrations/xxxx_create_users_table.go
+
+func (m *Migration) Up() {
+    table := m.CreateTable("users")
+    table.String("name").NotNull()
+    table.String("email").Unique().NotNull()
+}</code></pre>
+            <p>Now, run the migration to actually create the table in your SQLite database:</p>
+            <pre><code>kashvi migrate</code></pre>
+        </section>
+
+        <section>
+            <h2>4. Write the Controller Logic</h2>
+            <p>Open <code>app/controllers/user_controller.go</code>. We'll write the logic for creating a new user (the
+                <code>Store</code> method).</p>
+            <pre><code>// app/controllers/user_controller.go
+package controllers
+
+import (
+    "github.com/shashiranjanraj/kashvi/pkg/ctx"
+    "my-api/app/models"
+    "my-api/database" 
+)
+
+func (c *UserController) Store(ctx *ctx.Context) {
+    // 1. Define what JSON we expect and add validation rules!
+    var input struct {
+        Name  string `json:"name" validate:"required,min=2"`
+        Email string `json:"email" validate:"required,email"`
+    }
+
+    // 2. Bind and Validate. Tests automatically!
+    if !ctx.BindJSON(&input) { 
+        return 
+    }
+
+    // 3. Save to database
+    user := models.User{Name: input.Name, Email: input.Email}
+    database.DB.Create(&user)
+    
+    // 4. Send success response (201 Created)
+    ctx.Created(user)
+}</code></pre>
+        </section>
+
+        <section>
+            <h2>5. Register the Route</h2>
+            <p>Open <code>app/routes/api.go</code> and add this inside the <code>RegisterRoutes</code> function:</p>
+            <pre><code>// app/routes/api.go
+import "my-api/app/controllers"
+
+func RegisterAPI(r *router.Router) {
+    api := r.Group("/api")
+    
+    userCtrl := controllers.NewUserController()
+    api.Post("/users", "users.store", ctx.Wrap(userCtrl.Store))
+}</code></pre>
+        </section>
+
+        <section>
+            <h2>6. Run the Server & Test</h2>
+            <pre><code>kashvi serve</code></pre>
+            <p>Open your terminal and test the validation logic with <code>curl</code>:</p>
+            <pre><code>curl -X POST http://localhost:8080/api/users \
+     -H "Content-Type: application/json" \
+     -d '{"name": "Rahul"}'</code></pre>
+            <p>Since we forgot the email, you'll receive a 422 JSON validation error response exactly telling you what
+                went wrong. Welcome to Kashvi!</p>
+        </section>
+
+    </main>
+
+    <footer class="container footer">
+        <p>Copyright <span id="year"></span> Kashvi.</p>
+    </footer>
+
+    <script src="assets/site.js"></script>
+</body>
+
+</html>

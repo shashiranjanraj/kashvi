@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Building a User CRUD API in Kashvi</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1, h2, h3 {
+            color: #2c3e50;
+        }
+        h1 {
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            margin-top: 40px;
+            color: #34495e;
+        }
+        pre {
+            background-color: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            font-family: "Courier New", Courier, monospace;
+        }
+        code {
+            background-color: #e8e8e8;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: inherit;
+            color: #e74c3c;
+        }
+        pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+        .note {
+            background-color: #e1f5fe;
+            border-left: 4px solid #29b6f6;
+            padding: 10px 15px;
+            margin: 20px 0;
+            border-radius: 0 4px 4px 0;
+        }
+        .success {
+            background-color: #e8f5e9;
+            border-left: 4px solid #66bb6a;
+            padding: 10px 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Building a User CRUD API in Kashvi (5 Minutes)</h1>
+    
+    <p>Welcome to Kashvi! If you're a fresher or transitioning from PHP/Laravel, you'll feel right at home. We're going to build a fully functional <code>User</code> API in just a few minutes.</p>
+    
+    <p>No advanced features (like WebSockets or gRPC) here—just standard, clean RESTful architecture.</p>
+
+    <!-- STEP 1 -->
+    <h2>1. Create the Project</h2>
+    <p>First, scaffold a fresh project. This creates a ready-to-use folder structure for you.</p>
+    
+<pre><code>kashvi new my-api
+cd my-api</code></pre>
+
+    <div class="note">
+        <strong>What this does:</strong> This command generates your <code>main.go</code>, <code>app/</code> folder for your business logic, <code>database/</code> for schemas, and a <code>.env</code> file pre-configured for SQLite so you don't need any complex database setup yet.
+    </div>
+
+    <!-- STEP 2 -->
+    <h2>2. Generate the Resource</h2>
+    <p>We need a Model (to represent the user), a Controller (to handle HTTP requests), a Migration (to create the database table), and a Seeder (to add dummy data).</p>
+    <p>Instead of creating these manually, Kashvi's CLI does it in one command:</p>
+
+<pre><code>kashvi make:resource User</code></pre>
+
+    <p><strong>What this generated:</strong></p>
+    <ul>
+        <li><code>app/models/user.go</code>: Your data structure.</li>
+        <li><code>app/controllers/user_controller.go</code>: Where your API logic lives.</li>
+        <li><code>database/migrations/xxxx_create_users_table.go</code>: Instructions for creating the database table.</li>
+        <li><code>database/seeders/user_seeder.go</code>: A place to create fake users for testing.</li>
+    </ul>
+
+    <!-- STEP 3 -->
+    <h2>3. Define the Database Table</h2>
+    <p>Let's tell the database what a "User" looks like. Open the newly generated migration file inside the <code>database/migrations/</code> folder.</p>
+    <p>Add the <code>name</code> and <code>email</code> columns:</p>
+
+<pre><code>// database/migrations/xxxx_create_users_table.go
+
+func (m *Migration) Up() {
+    table := m.CreateTable("users")
+    table.String("name").NotNull()
+    table.String("email").Unique().NotNull()
+}</code></pre>
+
+    <p>Now, run the migration to actually create the table in your SQLite database:</p>
+<pre><code>kashvi migrate</code></pre>
+
+
+    <!-- STEP 4 -->
+    <h2>4. Write the Controller Logic</h2>
+    <p>Open <code>app/controllers/user_controller.go</code>. We'll write the logic for creating a new user (the <code>Store</code> method).</p>
+    <p>Kashvi has built-in JSON validation. If the user doesn't send a name, we automatically reject the request!</p>
+
+<pre><code>// app/controllers/user_controller.go
+package controllers
+
+import (
+    "github.com/shashiranjanraj/kashvi/pkg/ctx"
+    "my-api/app/models"
+    "my-api/database" // Assuming you export your db connection here
+)
+
+func (c *UserController) Store(ctx *ctx.Context) {
+    // 1. Define what JSON we expect and add validation rules!
+    var input struct {
+        Name  string `json:"name" validate:"required,min=2"`
+        Email string `json:"email" validate:"required,email"`
+    }
+
+    // 2. Bind and Validate. If it fails, Kashvi automatically sends a 422 Error.
+    if !ctx.BindJSON(&input) { 
+        return 
+    }
+
+    // 3. Save to database
+    user := models.User{Name: input.Name, Email: input.Email}
+    database.DB.Create(&user)
+    
+    // 4. Send success response (201 Created)
+    ctx.Created(user)
+}</code></pre>
+
+
+    <!-- STEP 5 -->
+    <h2>5. Register the Route</h2>
+    <p>We need to map a URL (like <code>POST /api/users</code>) to the controller we just wrote.</p>
+    <p>Open <code>app/routes/api.go</code> and add this inside the <code>RegisterRoutes</code> function:</p>
+
+<pre><code>// app/routes/api.go
+import "my-api/app/controllers"
+
+func RegisterAPI(r *router.Router) {
+    api := r.Group("/api")
+    
+    // Initialize our controller
+    userCtrl := controllers.NewUserController()
+
+    // Map the POST request to the Store function
+    api.Post("/users", "users.store", ctx.Wrap(userCtrl.Store))
+}</code></pre>
+
+
+    <!-- STEP 6 -->
+    <h2>6. Run the Server</h2>
+    <p>You're done coding! Let's start the server.</p>
+
+<pre><code>kashvi serve</code></pre>
+    <p><em>You should see a message saying your server is running on port 8080.</em></p>
+
+
+    <!-- STEP 7 -->
+    <h2>7. Test It Out</h2>
+    <p>Open your terminal and run this <code>curl</code> command (or use Postman) to create a user:</p>
+
+<pre><code>curl -X POST http://localhost:8080/api/users \
+     -H "Content-Type: application/json" \
+     -d '{"name": "Rahul", "email": "rahul@example.com"}'</code></pre>
+
+    <p><strong>Success Response:</strong></p>
+<pre><code>{
+  "name": "Rahul",
+  "email": "rahul@example.com"
+}</code></pre>
+
+    <p><strong>What if we forget the email? (Validation Test)</strong></p>
+<pre><code>curl -X POST http://localhost:8080/api/users \
+     -H "Content-Type: application/json" \
+     -d '{"name": "Rahul"}'</code></pre>
+
+    <p><strong>Error Response:</strong></p>
+<pre><code>{
+  "error": "validation failed",
+  "details": {
+    "email": "email is required"
+  }
+}</code></pre>
+
+    <div class="success">
+        <h3>🎉 Congratulations!</h3>
+        <p>You just built a production-grade, validated Go API without the confusing boilerplate. Welcome to Kashvi!</p>
+    </div>
+
+</body>
+</html>
