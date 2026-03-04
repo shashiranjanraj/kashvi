@@ -136,7 +136,7 @@ func addProjectDelegateCmds(root *cobra.Command) {
 }
 
 func printQuickStart() {
-	fmt.Println(`
+	fmt.Print(`
   kashvi – Go Web Framework  ⚡
 
   Install globally:
