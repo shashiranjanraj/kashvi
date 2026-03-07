@@ -27,8 +27,20 @@ func Connect() error {
 		return fmt.Errorf("database: build dialector: %w", err)
 	}
 
+	var gormLogLevel logger.LogLevel
+	switch config.DatabaseLogMode() {
+	case "info":
+		gormLogLevel = logger.Info
+	case "warn":
+		gormLogLevel = logger.Warn
+	case "error":
+		gormLogLevel = logger.Error
+	default:
+		gormLogLevel = logger.Silent
+	}
+
 	gormCfg := &gorm.Config{
-		Logger: logger.Default.LogMode(logger.Silent), // use pkg/logger, not GORM's own
+		Logger: logger.Default.LogMode(gormLogLevel),
 	}
 
 	DB, err = gorm.Open(dialector, gormCfg)

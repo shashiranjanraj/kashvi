@@ -19,6 +19,8 @@ const (
 	defaultJWTSecret      = "change-me-in-production"
 	defaultAppPort        = "8080"
 	defaultAppEnv         = "local"
+	defaultLogLevel       = "info"
+	defaultDBLogMode      = "silent"
 )
 
 var (
@@ -82,6 +84,8 @@ func defaultValues() map[string]string {
 		"APP_PORT":       defaultAppPort,
 		"APP_ENV":        defaultAppEnv,
 		"REDIS_PASSWORD": "",
+		"LOG_LEVEL":      defaultLogLevel,
+		"DB_LOG_MODE":    defaultDBLogMode,
 	}
 }
 
@@ -98,6 +102,16 @@ func AppPort() string {
 func AppEnv() string {
 	_ = Load()
 	return get("APP_ENV", defaultAppEnv)
+}
+
+func LogLevel() string {
+	_ = Load()
+	return get("LOG_LEVEL", defaultLogLevel)
+}
+
+func DatabaseLogMode() string {
+	_ = Load()
+	return get("DB_LOG_MODE", defaultDBLogMode)
 }
 
 func RedisPassword() string {

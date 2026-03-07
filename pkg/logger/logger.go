@@ -32,11 +32,15 @@ var L *slog.Logger
 func init() {
 	var level slog.Level
 
-	switch config.AppEnv() {
-	case "production", "prod":
-		level = slog.LevelInfo
-	default:
+	switch config.LogLevel() {
+	case "debug":
 		level = slog.LevelDebug
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo
 	}
 
 	opts := &slog.HandlerOptions{Level: level}
