@@ -14,6 +14,8 @@ Kashvi is a Laravel-inspired Go framework focused on practical defaults: routing
 | Guide | What you learn |
 |---|---|
 | [Configuration](./configuration.md) | `.env` and `config/app.json` loading and defaults |
+| [Middleware](./middleware.md) | CORS, Rate Limiting, and custom HTTP interceptors |
+
 | [Routing](./routing.md) | Named routes, groups, per-route middleware, route listing |
 | [Context API](./context.md) | Request parsing, validation, JSON/file responses |
 | [Validation](./validation.md) | Validation tags and error handling flow |

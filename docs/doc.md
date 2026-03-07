@@ -1,7 +1,46 @@
 # Kashvi Documentation
 
-This is a consolidated documentation file for the Kashvi framework.
+Kashvi is a Laravel-inspired Go framework focused on practical defaults: routing, middleware, auth, ORM helpers, migrations, queue workers, scheduler, storage, and testing support in one codebase.
 
+## Start Here
+
+1. [Installation & Quick Start](./installation.md)
+2. [5-Minute CRUD Example](./5-minute-crud.md)
+3. [CRUD Walkthrough](./crud.md)
+4. [CLI Reference](./cli.md)
+
+## Core Guides
+
+| Guide | What you learn |
+|---|---|
+| [Configuration](./configuration.md) | `.env` and `config/app.json` loading and defaults |
+| [Routing](./routing.md) | Named routes, groups, per-route middleware, route listing |
+| [Context API](./context.md) | Request parsing, validation, JSON/file responses |
+| [Validation](./validation.md) | Validation tags and error handling flow |
+| [Authentication](./auth.md) | JWT helpers and role-based access flow |
+| [ORM & Database](./orm.md) | Query builder API, pagination, parallel queries |
+| [Migrations](./migrations.md) | Registering migrations and lifecycle commands |
+
+## Runtime Systems
+
+| Guide | What you learn |
+|---|---|
+| [Queue](./queue.md) | Background jobs, retries, delayed jobs, failed jobs |
+| [Worker Pool](./workerpool.md) | Bounded concurrency for CPU/IO workloads |
+| [Storage](./storage.md) | Local/S3-compatible disk abstraction |
+| [WebSocket & SSE](./websocket.md) | Realtime events over WS and server-sent events |
+| [gRPC](./grpc.md) | Running standalone gRPC server with health checks |
+| [Logging](./logging.md) | Structured logs and optional MongoDB sink |
+| [TestKit](./testkit.md) | Scenario-based API testing helpers |
+
+## Suggested Learning Path
+
+1. Complete [Installation & Quick Start](./installation.md).
+2. Go through the [5-Minute CRUD Example](./5-minute-crud.md) to understand the workflow.
+3. Follow [CRUD Walkthrough](./crud.md) end-to-end.
+4. Open [Routing](./routing.md), [Context API](./context.md), and [Validation](./validation.md) together when building handlers.
+5. Add background processing with [Queue](./queue.md) and [Worker Pool](./workerpool.md).
+6. Expand infrastructure with [Storage](./storage.md), [gRPC](./grpc.md), and [Logging](./logging.md).
 # Installation & Quick Start
 
 This guide sets up a new Kashvi project from zero to a running server.
@@ -109,10 +148,6 @@ kashvi serve
 ```
 
 For full resource wiring and CRUD API flow, continue to [CRUD Walkthrough](./crud.md).
-
-
----
-
 # Building a User CRUD API in Kashvi (5 Minutes)
 
 Welcome to Kashvi! If you're a fresher or transitioning from PHP/Laravel, you'll feel right at home. We're going to build a fully functional `User` API in just a few minutes. 
@@ -278,10 +313,6 @@ curl -X POST http://localhost:8080/api/users \
 
 ### 🎉 Congratulations!
 You just built a production-grade, validated Go API without the confusing boilerplate. Welcome to Kashvi!
-
-
----
-
 # CRUD Walkthrough
 
 This guide covers a full Create/Read/Update/Delete flow using Kashvi generators and runtime commands.
@@ -437,10 +468,6 @@ After initial scaffold, common upgrades are:
 3. Add middleware (`Auth`, rate-limit, role checks) per route group.
 4. Add pagination in `Index` using `pkg/orm` pagination helpers.
 5. Add queue jobs for side effects (notifications, emails, analytics writes).
-
-
----
-
 # CLI Reference
 
 All commands are run via the `kashvi` binary. Install with `make install`.
@@ -642,10 +669,6 @@ kashvi --help
 kashvi make:resource --help
 kashvi queue:work --help
 ```
-
-
----
-
 # Configuration
 
 Kashvi reads configuration from two sources, merged in order:
@@ -756,10 +779,6 @@ val := config.Get("MY_CUSTOM_VAR", "default-value")
 ```
 
 Keys in `app.json` map 1:1 to env variable names (lowercase, underscores).
-
-
----
-
 # Routing
 
 Routes are registered in `app/routes/api.go`.
@@ -887,10 +906,6 @@ api.Get("/admin/report", "admin.report",
     middleware.RequireRole("admin"),
 )
 ```
-
-
----
-
 # Context API
 
 `pkg/ctx` provides a `gin.Context`-inspired request context for Kashvi handlers.
@@ -1064,10 +1079,6 @@ if len(errs) > 0 {
 ## Pool Efficiency
 
 `pkg/ctx` uses `sync.Pool` internally — `Context` objects are **recycled between requests**, resulting in zero allocations per request.
-
-
----
-
 # Validation
 
 Kashvi's validation engine lives in `pkg/validate`. It has **zero external dependencies** and supports 28 rules via struct tags.
@@ -1192,10 +1203,6 @@ Rules are comma-separated and evaluated in order. All failures are collected (no
 ```go
 validate:"required,min=8,max=64,alpha_num"
 ```
-
-
----
-
 # Authentication
 
 Kashvi includes JWT-based authentication with bcrypt passwords and RBAC role guards via `pkg/auth`.
@@ -1346,10 +1353,6 @@ func (c *AuthController) Login(ctx *appctx.Context) {
 
 Access tokens expire in **24 hours**, refresh tokens in **7 days**.
 Both values can be changed in `pkg/auth/jwt.go`.
-
-
----
-
 # ORM & Database
 
 Kashvi wraps GORM with a fluent chainable query builder in `pkg/orm`.
@@ -1539,10 +1542,6 @@ database.DB.Raw("SELECT id, title FROM posts WHERE published = ?", true).Scan(&r
 | Max idle connections | 10 |
 | Max conn lifetime | 5 minutes |
 | Max idle time | 2 minutes |
-
-
----
-
 # Migrations & Seeders
 
 ## Creating a Migration
@@ -1619,10 +1618,6 @@ func RunAll(db *gorm.DB) error {
 ```bash
 kashvi seed
 ```
-
-
----
-
 # Queue & Jobs
 
 Kashvi's queue system (`pkg/queue`) supports background job processing with retry, backoff, and persistent failure tracking.
@@ -1784,10 +1779,6 @@ func (c *OrderController) Store(ctx *appctx.Context) {
     ctx.Created(order)
 }
 ```
-
-
----
-
 # Worker Pool
 
 `pkg/workerpool` provides a **bounded goroutine pool** that limits concurrent goroutine creation under high load. Use it for CPU-intensive or I/O-heavy tasks that should not run in unbounded goroutines.
@@ -1912,10 +1903,6 @@ func GenerateReport(c *ctx.Context) {
     c.JSON(http.StatusAccepted, map[string]string{"status": "processing"})
 }
 ```
-
-
----
-
 # Storage
 
 `pkg/storage` provides a unified file-storage API inspired by Laravel's Storage facade.
@@ -2092,10 +2079,6 @@ storage.RegisterDisk("mydriver", &MyDriver{})
 // Use:
 storage.Use("mydriver").Put("file.txt", data)
 ```
-
-
----
-
 # WebSocket & SSE
 
 ---
@@ -2258,10 +2241,6 @@ es.addEventListener("update", (event) => {
 | Reconnect | Manual | Automatic |
 | Use case | Chat, games, live collab | Notifications, feeds, dashboards |
 | Browser support | All | All (IE11+) |
-
-
----
-
 # gRPC Server
 
 Kashvi includes a production-ready gRPC server that runs **alongside** the HTTP server on a separate port. It ships with a health-check service, server reflection, and pre-wired Prometheus metrics.
@@ -2376,10 +2355,6 @@ The gRPC metrics are available on the existing `/metrics` endpoint alongside HTT
 grpc_server_handled_total{grpc_method="/grpc.health.v1.Health/Check", grpc_code="OK"} 7
 grpc_server_handling_seconds_bucket{grpc_method="...", le="0.01"} 7
 ```
-
-
----
-
 # MongoDB Log Storage
 
 Kashvi can mirror all application logs to **MongoDB** in addition to stdout. The integration is:
@@ -2480,10 +2455,6 @@ defer logger.CloseMongoHandler()
 | Connect timeout | 5 seconds (falls back to stdout if unreachable) |
 
 If MongoDB is unreachable at startup, Kashvi logs a warning to stdout and continues without MongoDB — it never fails to start.
-
-
----
-
 # TestKit — JSON-Scenario-Driven API Testing
 
 `pkg/testkit` lets you write REST API integration tests **entirely in JSON**. One JSON file = one test case. No repeated Go boilerplate.
@@ -2736,1576 +2707,61 @@ Scenario: Create User
   mockStep[1]: method=sendmail     isMock=true  matchUrl=""
 ```
 
-
----
-
-# Installation & Quick Start
-
-This guide sets up a new Kashvi project from zero to a running server.
-
-## Requirements
-
-- Go `1.25+` (matches this framework's `go.mod`)
-- Optional: Redis (session, queue, cache features)
-- Optional: Postgres/MySQL/SQL Server (SQLite works by default)
-
-## Step 1: Install the CLI
-
-Install the global `kashvi` command once:
-
-```bash
-go install github.com/shashiranjanraj/kashvi/cmd/kashvi@latest
-kashvi --help
-```
-
-If you are developing the framework repository itself, you can also run:
-
-```bash
-make install
-```
-
-## Step 2: Create a project
-
-```bash
-mkdir my-app
-cd my-app
-go mod init my-app
-go get github.com/shashiranjanraj/kashvi
-```
-
-Create `main.go`:
-
-```go
-package main
-
-import (
-	"github.com/shashiranjanraj/kashvi/pkg/app"
-	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
-	"github.com/shashiranjanraj/kashvi/pkg/router"
-)
-
-func main() {
-	app.New().
-		Routes(func(r *router.Router) {
-			r.Get("/health", "health", appctx.Wrap(func(c *appctx.Context) {
-				c.Success(map[string]any{"ok": true})
-			}))
-		}).
-		Run()
-}
-```
-
-## Step 3: Add environment config
-
-Create `.env`:
-
-```ini
-APP_ENV=local
-APP_PORT=8080
-JWT_SECRET=replace-with-long-random-secret
-
-DB_DRIVER=sqlite
-DATABASE_DSN=kashvi.db
-
-REDIS_ADDR=localhost:6379
-REDIS_PASSWORD=
-```
-
-Notes:
-- `DB_DRIVER` supports: `sqlite`, `postgres`, `mysql`, `sqlserver`.
-- Kashvi reads both `config/app.json` and `.env` (then applies defaults).
-
-## Step 4: Run the app
-
-From the project directory:
-
-```bash
-kashvi serve
-```
-
-The CLI delegates to your project entrypoint (`go run . serve`), so your own routes/migrations/seeders are used.
-
-Quick checks:
-
-```bash
-curl http://localhost:8080/health
-kashvi route:list
-```
-
-## Step 5: Add your first resource
-
-```bash
-kashvi make:crud Post
-```
-
-This generates model/controller/service/migration/seeder/test-scenario files. Then:
-
-```bash
-kashvi migrate
-kashvi serve
-```
-
-For full resource wiring and CRUD API flow, continue to [CRUD Walkthrough](./crud.md).
-
-
----
-
-# Building a User CRUD API in Kashvi (5 Minutes)
-
-Welcome to Kashvi! If you're a fresher or transitioning from PHP/Laravel, you'll feel right at home. We're going to build a fully functional `User` API in just a few minutes. 
-
-No advanced features (like WebSockets or gRPC) here—just standard, clean RESTful architecture.
-
----
-
-## 1. Create the Project
-First, scaffold a fresh project. This creates a ready-to-use folder structure for you.
-
-```bash
-kashvi new my-api
-cd my-api
-```
-
-*(This command generates your `main.go`, `app/` folder for logic, `database/` for schemas, and a `.env` file pre-configured for SQLite so you don't need any complex database setup yet).*
-
----
-
-## 2. Generate the Resource
-We need a Model (to represent the user), a Controller (to handle HTTP requests), a Migration (to create the database table), and a Seeder (to add dummy data).
-
-Instead of creating these manually, Kashvi's CLI does it in one command:
-
-```bash
-kashvi make:resource User
-```
-
-**What this did:**
-* `app/models/user.go`: Your data structure.
-* `app/controllers/user_controller.go`: Where your API logic lives.
-* `database/migrations/xxxx_create_users_table.go`: Instructions for creating the database table.
-* `database/seeders/user_seeder.go`: A place to create fake users for testing.
-
----
-
-## 3. Define the Database Table
-Let's tell the database what a "User" looks like. Open the newly generated migration file inside the `database/migrations/` folder.
-
-Add the `name` and `email` columns:
-
-```go
-// database/migrations/xxxx_create_users_table.go
-
-func (m *Migration) Up() {
-    table := m.CreateTable("users")
-    table.String("name").NotNull()
-    table.String("email").Unique().NotNull()
-}
-```
-
-Now, run the migration to actually create the table in your SQLite database:
-```bash
-kashvi migrate
-```
-
----
-
-## 4. Write the Controller Logic
-Open `app/controllers/user_controller.go`. We'll write the logic for creating a new user (the `Store` method).
-
-Kashvi has built-in JSON validation. If the user doesn't send a name, we automatically reject the request!
-
-```go
-// app/controllers/user_controller.go
-package controllers
-
-import (
-    "github.com/shashiranjanraj/kashvi/pkg/ctx"
-    "my-api/app/models"
-    "my-api/database" // Assuming you export your db connection here
-)
-
-func (c *UserController) Store(ctx *ctx.Context) {
-    // 1. Define what JSON we expect and add validation rules!
-    var input struct {
-        Name  string `json:"name" validate:"required,min=2"`
-        Email string `json:"email" validate:"required,email"`
-    }
-
-    // 2. Bind and Validate. If it fails, Kashvi automatically sends a 422 Error to the client.
-    if !ctx.BindJSON(&input) { 
-        return 
-    }
-
-    // 3. Save to database
-    user := models.User{Name: input.Name, Email: input.Email}
-    database.DB.Create(&user)
-    
-    // 4. Send success response (201 Created)
-    ctx.Created(user)
-}
-```
-
----
-
-## 5. Register the Route
-We need to map a URL (like `POST /api/users`) to the controller we just wrote. 
-
-Open `app/routes/api.go` and add this inside the `RegisterRoutes` function:
-
-```go
-// app/routes/api.go
-import "my-api/app/controllers"
-
-func RegisterAPI(r *router.Router) {
-    api := r.Group("/api")
-    
-    // Initialize our controller
-    userCtrl := controllers.NewUserController()
-
-    // Map the POST request to the Store function
-    api.Post("/users", "users.store", ctx.Wrap(userCtrl.Store))
-}
-```
-
----
-
-## 6. Run the Server
-You're done coding! Let's start the server.
-
-```bash
-kashvi serve
-```
-*You should see a message saying your server is running on port 8080.*
-
----
-
-## 7. Test It Out
-Open your terminal and run this `curl` command (or use Postman) to create a user:
-
-```bash
-curl -X POST http://localhost:8080/api/users \
-     -H "Content-Type: application/json" \
-     -d '{"name": "Rahul", "email": "rahul@example.com"}'
-```
-
-**Success Response:**
-```json
-{
-  "name": "Rahul",
-  "email": "rahul@example.com"
-}
-```
-
-**What if we forget the email? (Validation Test)**
-```bash
-curl -X POST http://localhost:8080/api/users \
-     -H "Content-Type: application/json" \
-     -d '{"name": "Rahul"}'
-```
-
-**Error Response:**
-```json
-{
-  "error": "validation failed",
-  "details": {
-    "email": "email is required"
-  }
-}
-```
-
-### 🎉 Congratulations!
-You just built a production-grade, validated Go API without the confusing boilerplate. Welcome to Kashvi!
-
-
----
-
-# CRUD Walkthrough
-
-This guide covers a full Create/Read/Update/Delete flow using Kashvi generators and runtime commands.
-
-## 1. Scaffold a resource
-
-Generate all CRUD files:
-
-```bash
-kashvi make:crud Post
-```
-
-You can also use flags:
-
-```bash
-kashvi make:crud Post --authorize --cache
-```
-
-- `--authorize`: route snippet printed by CLI includes an auth middleware placeholder.
-- `--cache`: generated controller includes cache TODO placeholders in `Index` and `Show`.
-
-## 2. Generated files
-
-For `Post`, Kashvi creates:
-
-- `app/models/post.go`
-- `app/controllers/post_controller.go`
-- `app/services/post_service.go`
-- `database/migrations/<timestamp>_create_posts_table.go`
-- `database/seeders/post_seeder.go`
-- `testdata/post_scenarios.json`
-
-## 3. Register routes
-
-The generator prints lines to paste into your route setup. Typical wiring:
-
-```go
-package routes
-
-import (
-	"github.com/your-org/your-app/app/controllers"
-	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
-	"github.com/shashiranjanraj/kashvi/pkg/router"
-)
-
-func RegisterAPI(r *router.Router) {
-	api := r.Group("/api")
-
-	ctrl := controllers.NewPostController()
-	api.Get("/posts", "posts.index", appctx.Wrap(ctrl.Index))
-	api.Post("/posts", "posts.store", appctx.Wrap(ctrl.Store))
-	api.Get("/posts/{id}", "posts.show", appctx.Wrap(ctrl.Show))
-	api.Put("/posts/{id}", "posts.update", appctx.Wrap(ctrl.Update))
-	api.Delete("/posts/{id}", "posts.destroy", appctx.Wrap(ctrl.Destroy))
-}
-```
-
-Then ensure the route function is attached in `main.go`:
-
-```go
-app.New().
-	Routes(routes.RegisterAPI).
-	Run()
-```
-
-## 4. Implement migration
-
-The generated migration registers automatically, but `Up` and `Down` are placeholders. Fill them:
-
-```go
-func (m *M_20260301010101_create_posts_table) Up(db *gorm.DB) error {
-	type Post struct {
-		gorm.Model
-		Title string
-		Body  string
-	}
-	return db.AutoMigrate(&Post{})
-}
-
-func (m *M_20260301010101_create_posts_table) Down(db *gorm.DB) error {
-	return db.Migrator().DropTable("posts")
-}
-```
-
-Run migration:
-
-```bash
-kashvi migrate
-```
-
-Inspect migration state:
-
-```bash
-kashvi migrate:status
-```
-
-## 5. Run and test endpoints
-
-Start server:
-
-```bash
-kashvi serve
-```
-
-### Create
-
-```bash
-curl -X POST http://localhost:8080/api/posts \
-  -H 'Content-Type: application/json' \
-  -d '{}'
-```
-
-### List
-
-```bash
-curl http://localhost:8080/api/posts
-```
-
-### Show
-
-```bash
-curl http://localhost:8080/api/posts/1
-```
-
-### Update
-
-```bash
-curl -X PUT http://localhost:8080/api/posts/1 \
-  -H 'Content-Type: application/json' \
-  -d '{}'
-```
-
-### Delete
-
-```bash
-curl -X DELETE http://localhost:8080/api/posts/1 -i
-```
-
-The generated `Destroy` handler returns `204 No Content`.
-
-## 6. Use generated test scenarios
-
-`kashvi make:crud` creates `testdata/post_scenarios.json`. You can feed these scenarios into your `pkg/testkit` test runner and keep them as executable API documentation.
-
-If you used `--authorize`, scenario entries include an `Authorization` header placeholder (`Bearer dummy-jwt-token`).
-
-## 7. Next improvements
-
-After initial scaffold, common upgrades are:
-
-1. Replace empty request structs in controller methods with typed DTOs + validation tags.
-2. Move DB logic into `app/services/post_service.go` and keep controllers thin.
-3. Add middleware (`Auth`, rate-limit, role checks) per route group.
-4. Add pagination in `Index` using `pkg/orm` pagination helpers.
-5. Add queue jobs for side effects (notifications, emails, analytics writes).
-
-
----
-
-# Routing
-
-Routes are registered in `app/routes/api.go`.
-
----
-
-## Basic Routes
-
-```go
-func RegisterAPI(r *router.Router) {
-    r.Get("/ping", "ping", func(w http.ResponseWriter, r *http.Request) {
-        w.Write([]byte("pong"))
-    })
-
-    r.Post("/users",      "users.store",   handler)
-    r.Put("/users/{id}",  "users.update",  handler)
-    r.Patch("/users/{id}","users.patch",   handler)
-    r.Delete("/users/{id}","users.destroy",handler)
-}
-```
-
----
-
-## Using `ctx.Context` (recommended)
-
-```go
-import appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
-
-r.Get("/users/{id}", "users.show", appctx.Wrap(func(c *appctx.Context) {
-    id := c.Param("id")
-    c.Success(map[string]any{"id": id})
-}))
-```
-
----
-
-## Route Groups
-
-Groups let you share a path prefix and/or middleware across multiple routes:
-
-```go
-// All routes under /api with rate limiting
-api := r.Group("/api", middleware.RateLimit(120, time.Minute))
-
-api.Get("/users", "users.index", appctx.Wrap(ctrl.Index))
-api.Post("/users", "users.store", appctx.Wrap(ctrl.Store))
-
-// Nested group: /api/admin with auth guard
-admin := api.Group("/admin", middleware.AuthMiddleware, middleware.RequireRole("admin"))
-admin.Get("/stats", "admin.stats", appctx.Wrap(adminCtrl.Stats))
-```
-
----
-
-## URL Parameters
-
-```go
-// Define: /articles/{slug}/comments/{id}
-r.Get("/articles/{slug}/comments/{id}", "comments.show", appctx.Wrap(func(c *appctx.Context) {
-    slug := c.Param("slug")
-    id   := c.Param("id")
-    // ...
-}))
-```
-
----
-
-## Named Routes & URL Generation
-
-Every route takes a name as the second argument. Names let you generate URLs safely:
-
-```go
-// Registration
-r.Get("/users/{id}", "users.show", handler)
-
-// URL generation (anywhere in your code)
-url, err := myRouter.URL("users.show", map[string]string{"id": "42"})
-// url = "/users/42"
-```
-
----
-
-## Mounting Third-Party Handlers
-
-```go
-// Prometheus metrics (already wired by framework)
-r.HandleFunc("/metrics", metrics.Handler())
-
-// Any http.Handler
-r.Mount("/storage", http.FileServer(http.Dir("storage")))
-```
-
----
-
-## Listing All Routes
-
-```bash
-kashvi route:list
-```
-
-Output:
-```
-METHOD   PATH                    NAME
-------   ----                    ----
-DELETE   /api/users/{id}         users.destroy
-GET      /api/health             health
-GET      /api/users              users.index
-GET      /api/users/{id}         users.show
-POST     /api/login              auth.login
-POST     /api/register           auth.register
-POST     /api/users              users.store
-PUT      /api/users/{id}         users.update
-```
-
----
-
-## Per-Route Middleware
-
-Middleware can be applied to individual routes as variadic arguments:
-
-```go
-api.Get("/admin/report", "admin.report",
-    appctx.Wrap(adminCtrl.Report),
-    middleware.AuthMiddleware,
-    middleware.RequireRole("admin"),
-)
-```
-
-
----
-
-# Context API
-
-`pkg/ctx` provides a `gin.Context`-inspired request context for Kashvi handlers.
-Instead of `(http.ResponseWriter, *http.Request)`, your handler receives a single `*ctx.Context`.
-
----
-
-## Handler Signature
-
-```go
-import appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
-
-func MyHandler(c *appctx.Context) {
-    // use c for everything
-}
-
-// Register with ctx.Wrap():
-r.Get("/path", "name", appctx.Wrap(MyHandler))
-```
-
----
-
-## Reading the Request
-
-### URL Parameters
-```go
-id   := c.Param("id")     // /users/{id}
-slug := c.Param("slug")   // /posts/{slug}
-```
-
-### Query String
-```go
-page    := c.Query("page")                  // "" if absent
-sort    := c.DefaultQuery("sort", "created_at")
-```
-
-### Request Body (JSON)
-```go
-// Automatic — decodes + validates, sends 422 on failure
-var input struct {
-    Name  string `json:"name"  validate:"required,min=2"`
-    Email string `json:"email" validate:"required,email"`
-}
-if !c.BindJSON(&input) {
-    return  // response already sent
-}
-
-// Manual — returns errors to handle yourself
-errs, err := c.ShouldBindJSON(&input)
-if err != nil { /* bad JSON */ }
-if len(errs) > 0 { /* validation errors */}
-```
-
-### Form Data
-```go
-name := c.PostForm("name")
-```
-
-### Headers & Cookies
-```go
-token  := c.Header("Authorization")
-accept := c.Header("Accept")
-
-val, err := c.Cookie("session_id")
-```
-
-### Metadata
-```go
-method := c.Method()     // "GET"
-path   := c.Path()       // "/api/users/42"
-full   := c.FullPath()   // "GET /api/users/42"
-ip     := c.ClientIP()   // respects X-Forwarded-For
-isXHR  := c.IsXHR()      // X-Requested-With: XMLHttpRequest
-ctx    := c.Context()    // underlying context.Context
-```
-
-### Raw Body
-```go
-bytes, err := c.Body()
-```
-
----
-
-## Sending Responses
-
-### JSON
-```go
-c.JSON(200, map[string]any{"key": "value"})
-
-// Pre-wrapped envelopes:
-c.Success(data)         // 200 {"status":200,"data":{...}}
-c.Created(data)         // 201 {"status":201,"data":{...}}
-c.Error(400, "Bad req") // 4xx {"status":400,"message":"..."}
-c.ValidationError(errs) // 422 {"status":422,"message":"Validation failed","errors":{...}}
-
-// Shortcuts:
-c.Unauthorized()        // 401
-c.Unauthorized("Token expired")
-c.Forbidden()           // 403
-c.NotFound()            // 404
-c.NotFound("Post not found")
-```
-
-### Other response types
-```go
-c.String(200, "Hello, %s!", name)
-c.Status(204)               // status only, no body
-c.Redirect(302, "/login")
-c.File("/path/to/file.pdf")
-```
-
-### Headers & Cookies
-```go
-c.SetHeader("X-Request-Id", "abc123")
-c.SetCookie("token", value, 3600, "/", "", true, true)
-```
-
----
-
-## Per-Request Store
-
-Pass values between middleware and handlers via the request-scoped store:
-
-```go
-// In middleware (e.g. AuthMiddleware):
-c.Set("user_id", claims.UserID)
-c.Set("role", claims.Role)
-
-// In handler:
-userID := c.GetUint("user_id")
-role   := c.GetString("role")
-
-// Generic (any type):
-val, ok := c.Get("key")
-val      = c.MustGet("key") // panics if missing
-```
-
----
-
-## Abort
-
-```go
-func AdminOnly(c *appctx.Context) {
-    if c.GetString("role") != "admin" {
-        c.Abort(403, "Admin access required")
-        return
-    }
-    // continue
-}
-```
-
----
-
-## Validate Without Binding
-
-```go
-type Input struct {
-    Age int `json:"age" validate:"required,min=18"`
-}
-var input Input
-// ... populate input ...
-errs := c.Validate(&input)
-if len(errs) > 0 {
-    c.ValidationError(errs)
-    return
-}
-```
-
----
-
-## Pool Efficiency
-
-`pkg/ctx` uses `sync.Pool` internally — `Context` objects are **recycled between requests**, resulting in zero allocations per request.
-
-
----
-
-# Validation
-
-Kashvi's validation engine lives in `pkg/validate`. It has **zero external dependencies** and supports 28 rules via struct tags.
-
----
-
-## Struct Tags
-
-Add a `validate` tag to any field:
-
-```go
-type RegisterInput struct {
-    Name            string  `json:"name"             validate:"required,min=2,max=100"`
-    Email           string  `json:"email"            validate:"required,email"`
-    Age             int     `json:"age"              validate:"required,min=18,max=120"`
-    Role            string  `json:"role"             validate:"in=admin,user,editor"`
-    Password        string  `json:"password"         validate:"required,min=8"`
-    PasswordConfirm string  `json:"password_confirm" validate:"confirmed=password"`
-    Website         *string `json:"website"          validate:"nullable,url"`
-}
-```
-
----
-
-## All Validation Rules
-
-| Rule | Example Tag | Description |
-|---|---|---|
-| `required` | `validate:"required"` | Field must be non-zero |
-| `email` | `validate:"email"` | Valid email address |
-| `min` | `validate:"min=3"` | String min length / numeric min value |
-| `max` | `validate:"max=100"` | String max length / numeric max value |
-| `between` | `validate:"between=1,10"` | Numeric between two values (inclusive) |
-| `in` | `validate:"in=a,b,c"` | Value must be one of the listed options |
-| `not_in` | `validate:"not_in=bad,worse"` | Value must NOT be in the list |
-| `confirmed` | `validate:"confirmed=password"` | Must match another field's value |
-| `url` | `validate:"url"` | Valid HTTP/HTTPS URL |
-| `alpha` | `validate:"alpha"` | Letters only |
-| `alpha_num` | `validate:"alpha_num"` | Letters and numbers only |
-| `alpha_dash` | `validate:"alpha_dash"` | Letters, numbers, `-`, `_` |
-| `numeric` | `validate:"numeric"` | Any number (int or float) |
-| `integer` | `validate:"integer"` | Must be an integer |
-| `boolean` | `validate:"boolean"` | true or false |
-| `ip` | `validate:"ip"` | Valid IPv4 or IPv6 address |
-| `uuid` | `validate:"uuid"` | Valid UUID |
-| `date` | `validate:"date"` | Valid date in `YYYY-MM-DD` format |
-| `date_format` | `validate:"date_format=2006-01-02"` | Custom Go time layout |
-| `starts_with` | `validate:"starts_with=https"` | String prefix check |
-| `ends_with` | `validate:"ends_with=.go"` | String suffix check |
-| `contains` | `validate:"contains=@"` | Substring check |
-| `regex` | `validate:"regex=^[A-Z]+"` | Custom regex pattern |
-| `json` | `validate:"json"` | Valid JSON string |
-| `len` | `validate:"len=6"` | Exact string length |
-| `same` | `validate:"same=other_field"` | Alias for `confirmed` |
-| `different` | `validate:"different=old_password"` | Must differ from field |
-| `nullable` | `validate:"nullable,email"` | Skip all other rules if the field is nil/zero |
-
----
-
-## Using Validation Directly
-
-### In a handler with `BindJSON`:
-```go
-func (ctrl *UserController) Register(c *appctx.Context) {
-    var input RegisterInput
-    if !c.BindJSON(&input) {
-        return // 422 already sent
-    }
-    // input is valid here
-}
-```
-
-### Manual validation:
-```go
-import "github.com/shashiranjanraj/kashvi/pkg/validate"
-
-errs := validate.Struct(&input)
-if validate.HasErrors(errs) {
-    // errs = map[string]string{"email": "The email field must be a valid email address."}
-}
-```
-
----
-
-## Error Messages
-
-Errors are returned as `map[string]string` where the key is the JSON field name:
-
-```json
-{
-  "status": 422,
-  "message": "Validation failed",
-  "errors": {
-    "email": "The email field must be a valid email address.",
-    "password": "The password field must be at least 8 characters.",
-    "password_confirm": "The password_confirm field must match password."
-  }
-}
-```
-
----
-
-## Nullable Fields
-
-Use `nullable` to skip all other rules when the field is empty/nil:
-
-```go
-type UpdateInput struct {
-    // These are all optional — only validated if provided
-    Bio     *string `json:"bio"     validate:"nullable,max=500"`
-    Website *string `json:"website" validate:"nullable,url"`
-    Age     *int    `json:"age"     validate:"nullable,min=18"`
-}
-```
-
----
-
-## Combining Rules
-
-Rules are comma-separated and evaluated in order. All failures are collected (not short-circuit):
-
-```go
-validate:"required,min=8,max=64,alpha_num"
-```
-
-
----
-
-# Queue & Jobs
-
-Kashvi's queue system (`pkg/queue`) supports background job processing with retry, backoff, and persistent failure tracking.
-
----
-
-## Defining a Job
-
-```go
-// app/jobs/welcome_email_job.go
-package jobs
-
-type WelcomeEmailJob struct {
-    UserID uint   `json:"user_id"`
-    Email  string `json:"email"`
-}
-
-func (j WelcomeEmailJob) Handle() error {
-    // send email...
-    return mailer.Send(j.Email, "Welcome!", "welcome.html")
-}
-```
-
-Register the job type at boot (so it can be deserialized):
-
-```go
-// In main.go init() or a jobs/register.go file:
-queue.Register("jobs.WelcomeEmailJob", func() queue.Job {
-    return &jobs.WelcomeEmailJob{}
-})
-```
-
----
-
-## Dispatching Jobs
-
-```go
-import "github.com/shashiranjanraj/kashvi/pkg/queue"
-
-// Immediate
-queue.Dispatch(jobs.WelcomeEmailJob{UserID: user.ID, Email: user.Email})
-
-// After a delay (5 minutes)
-queue.DispatchAfter(jobs.WelcomeEmailJob{UserID: user.ID, Email: user.Email}, 5*time.Minute)
-```
-
----
-
-## Queue Drivers
-
-### In-Memory (default — dev only)
-
-Jobs are lost on restart. Good for development and testing.
-
-```go
-// Default — no configuration needed
-queue.Dispatch(myJob)
-```
-
-### Redis Driver (production)
-
-Jobs survive restarts. Delayed jobs use Redis sorted sets.
-
-```go
-// In server.go or a boot function, after cache.Connect():
-import (
-    "github.com/shashiranjanraj/kashvi/pkg/cache"
-    "github.com/shashiranjanraj/kashvi/pkg/queue"
-)
-
-queue.SetDriver(queue.NewRedisDriver(cache.RDB))
-```
-
-Redis keys used:
-- `kashvi:queue:jobs` — immediate job list (LPUSH/BRPOP)
-- `kashvi:queue:delayed` — delayed job sorted set (score = Unix timestamp)
-
----
-
-## Starting Workers
-
-```bash
-# From CLI (production)
-kashvi queue:work --workers=5
-
-# Or programmatically:
-queue.StartWorkers(ctx, 5)
-```
-
----
-
-## Retry & Backoff
-
-Failed jobs are automatically retried with linear backoff:
-- Attempt 1 → wait 1s → Attempt 2 → wait 2s → Attempt 3
-
-```go
-// Change retry limit (default: 3)
-queue.SetMaxRetry(5)
-```
-
----
-
-## Failed Jobs
-
-After all retries are exhausted, the job is recorded in:
-1. **In-memory** — available via `queue.FailedJobs()`
-2. **Database** — `kashvi_failed_jobs` table (if `queue.UseDB()` is called)
-
-The database persistence is wired automatically at server boot.
-
-**Table structure:**
-
-| Column | Type | Description |
-|---|---|---|
-| `id` | uint | Auto-increment PK |
-| `job_type` | string | Go type name |
-| `payload` | text | JSON-encoded job data |
-| `error` | text | Last error message |
-| `attempts` | int | Number of attempts made |
-| `failed_at` | timestamp | When it failed |
-
-**Querying failures:**
-
-```go
-// In memory
-failed := queue.FailedJobs()
-for _, f := range failed {
-    fmt.Printf("%T failed after %d attempts: %v\n", f.Job, f.Attempts, f.Err)
-}
-
-// From DB
-var records []queue.FailedJobRecord
-database.DB.Order("failed_at desc").Find(&records)
-```
-
----
-
-## Full Example — Order Processing
-
-```go
-type ProcessOrderJob struct {
-    OrderID uint `json:"order_id"`
-}
-
-func (j ProcessOrderJob) Handle() error {
-    var order models.Order
-    if err := database.DB.First(&order, j.OrderID).Error; err != nil {
-        return err // will be retried
-    }
-    // charge card, update inventory, send confirmation...
-    return nil
-}
-
-// In your controller:
-func (c *OrderController) Store(ctx *appctx.Context) {
-    // ... create order ...
-    queue.Dispatch(ProcessOrderJob{OrderID: order.ID})
-    ctx.Created(order)
-}
-```
-
-
----
-
-# Worker Pool
-
-`pkg/workerpool` provides a **bounded goroutine pool** that limits concurrent goroutine creation under high load. Use it for CPU-intensive or I/O-heavy tasks that should not run in unbounded goroutines.
-
----
-
-## Why use a pool?
-
-| Approach | Problem |
-|----------|---------|
-| `go doWork()` for every request | Goroutines spike unboundedly under load — OOM risk |
-| Worker pool | Hard ceiling on concurrency — predictable memory |
-
----
-
-## Configuration
-
-```ini
-# .env
-WORKER_POOL_SIZE=50   # default: 50
-```
-
----
-
-## Basic usage
-
-```go
-import "github.com/shashiranjanraj/kashvi/pkg/workerpool"
-
-// Create a pool (use config.WorkerPoolSize() for env-driven size)
-pool := workerpool.New(config.WorkerPoolSize())
-defer pool.Shutdown()
-
-// Non-blocking submit
-err := pool.Submit(func() {
-    processImage(imageData)
-})
-if errors.Is(err, workerpool.ErrPoolFull) {
-    // Pool is busy — return 429, push to queue, etc.
-    c.JSON(http.StatusTooManyRequests, map[string]string{"error": "server busy"})
-    return
-}
-```
-
----
-
-## Blocking submit
-
-When you want to wait until a slot is available:
-
-```go
-err := pool.SubmitWait(func() {
-    sendReportEmail(userID)
-})
-if errors.Is(err, workerpool.ErrPoolClosed) {
-    // Pool was shut down
-}
-```
-
----
-
-## Shutdown
-
-`Shutdown()` stops accepting new tasks, waits for all in-flight tasks to complete, then releases all worker goroutines. Safe to call multiple times.
-
-```go
-pool.Shutdown()
-```
-
----
-
-## Error reference
-
-| Error | When |
-|-------|------|
-| `workerpool.ErrPoolFull` | All workers are busy and the queue buffer is full |
-| `workerpool.ErrPoolClosed` | `Shutdown()` has been called |
-
----
-
-## Panic safety
-
-Workers recover from panics automatically — a bad task never kills the pool or unexpectedly terminates a goroutine. The next task runs as normal.
-
----
-
-## Sizing guide
-
-| Use case | Recommended size |
-|----------|-----------------|
-| Image processing | `runtime.NumCPU()` |
-| Network I/O (external APIs) | 50–200 |
-| DB queries | 20–50 (limited by DB connection pool) |
-| Mixed workloads | `WORKER_POOL_SIZE=50` (default) |
-
----
-
-## Buffer size
-
-The internal task queue buffer is `2 × size`. This absorbs short bursts without returning `ErrPoolFull`. For example, a pool of 50 workers can buffer 100 pending tasks before backpressure kicks in.
-
----
-
-## Integration with HTTP handlers
-
-A good pattern: create one shared pool at app startup and use it across handlers.
-
-```go
-// internal/kernel/http.go
-var Pool = workerpool.New(config.WorkerPoolSize())
-
-// In a handler
-func GenerateReport(c *ctx.Context) {
-    err := kernel.Pool.Submit(func() {
-        report := buildReport(c.ParamInt("id"))
-        cache.Set("report:"+id, report, time.Hour)
-    })
-    if errors.Is(err, workerpool.ErrPoolFull) {
-        c.JSON(http.StatusTooManyRequests, map[string]string{"error": "too many requests"})
-        return
-    }
-    c.JSON(http.StatusAccepted, map[string]string{"status": "processing"})
-}
-```
-
-
----
-
-# Storage
-
-`pkg/storage` provides a unified file-storage API inspired by Laravel's Storage facade.
-Switch between local disk and S3-compatible storage with a single env variable.
-
----
-
-## Configuration
-
-```ini
-STORAGE_DISK=local      # default driver: "local" or "s3"
-```
-
----
-
-## Using the Default Disk
-
-```go
-import "github.com/shashiranjanraj/kashvi/pkg/storage"
-
-// Write
-storage.Put("avatars/user-1.jpg", imageBytes)
-storage.PutStream("uploads/file.pdf", r.Body)
-
-// Read
-data, err := storage.Get("avatars/user-1.jpg")
-stream, err := storage.GetStream("uploads/file.pdf")
-defer stream.Close()
-
-// Metadata
-exists  := storage.Exists("avatars/user-1.jpg")
-missing := storage.Missing("avatars/user-1.jpg")
-size, _ := storage.Size("avatars/user-1.jpg")
-modTime, _ := storage.LastModified("avatars/user-1.jpg")
-
-// Public URL
-url := storage.URL("avatars/user-1.jpg")
-
-// Delete
-storage.Delete("avatars/user-1.jpg")
-
-// Copy / Move
-storage.Copy("tmp/upload.jpg", "images/final.jpg")
-storage.Move("tmp/upload.jpg", "archive/old.jpg")
-
-// Directories
-files, _ := storage.Files("avatars")          // non-recursive
-all, _   := storage.AllFiles("avatars")       // recursive
-dirs, _  := storage.Directories("uploads")
-storage.MakeDirectory("exports")
-storage.DeleteDirectory("tmp")
-```
-
----
-
-## Using a Specific Disk
-
-```go
-// Use S3 explicitly
-storage.Use("s3").Put("backups/db.sql.gz", data)
-
-// Use local disk explicitly
-storage.Use("local").Get("cache/data.json")
-```
-
-> Method name is `Use()` (not `Disk()`) to avoid conflict with the `Disk` interface type.
-
----
-
-## File Upload Handler
-
-```go
-func (c *UploadController) Store(ctx *appctx.Context) {
-    ctx.R.ParseMultipartForm(10 << 20) // 10MB max
-
-    file, header, err := ctx.R.FormFile("file")
-    if err != nil {
-        ctx.Error(400, "No file uploaded")
-        return
-    }
-    defer file.Close()
-
-    path := fmt.Sprintf("uploads/%d_%s", time.Now().Unix(), header.Filename)
-    if err := storage.PutStream(path, file); err != nil {
-        ctx.Error(500, "Upload failed")
-        return
-    }
-
-    ctx.Created(map[string]any{
-        "path": path,
-        "url":  storage.URL(path),
-    })
-}
-```
-
----
-
-## Local Disk
-
-Files are stored relative to `STORAGE_LOCAL_ROOT` (default: `./storage`).
-
-Public access: `GET /storage/{path}` is automatically mounted when `STORAGE_DISK=local`.
-
-```ini
-STORAGE_LOCAL_ROOT=storage
-STORAGE_URL=http://localhost:8080/storage
-```
-
----
-
-## S3 / AWS
-
-```ini
-STORAGE_DISK=s3
-S3_BUCKET=my-bucket
-S3_REGION=us-east-1
-S3_KEY=AKIAIOSFODNN7EXAMPLE
-S3_SECRET=wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY
-S3_URL=https://my-bucket.s3.us-east-1.amazonaws.com
-```
-
----
-
-## MinIO (self-hosted S3)
-
-Run locally with Docker:
-
-```bash
-docker run -p 9000:9000 -p 9001:9001 \
-  -e MINIO_ROOT_USER=minioadmin \
-  -e MINIO_ROOT_PASSWORD=minioadmin \
-  minio/minio server /data --console-address ":9001"
-```
-
-```ini
-STORAGE_DISK=s3
-S3_BUCKET=my-bucket
-S3_KEY=minioadmin
-S3_SECRET=minioadmin
-S3_ENDPOINT=http://localhost:9000
-S3_REGION=us-east-1
-```
-
-Create the bucket at `http://localhost:9001` (MinIO console UI).
-
----
-
-## Cloudflare R2 / DigitalOcean Spaces
-
-Same as MinIO — just set `S3_ENDPOINT` to your provider's endpoint URL.
-
-```ini
-# Cloudflare R2
-S3_ENDPOINT=https://<ACCOUNT_ID>.r2.cloudflarestorage.com
-
-# DigitalOcean Spaces
-S3_ENDPOINT=https://nyc3.digitaloceanspaces.com
-```
-
----
-
-## Custom Driver
-
-Implement the `Disk` interface and register it:
-
-```go
-type MyDriver struct{}
-func (d *MyDriver) Put(path string, content []byte) error { ... }
-// ... implement all 16 Disk interface methods
-
-// Register at boot:
-storage.RegisterDisk("mydriver", &MyDriver{})
-
-// Use:
-storage.Use("mydriver").Put("file.txt", data)
-```
-
-
----
-
-# gRPC Server
-
-Kashvi includes a production-ready gRPC server that runs **alongside** the HTTP server on a separate port. It ships with a health-check service, server reflection, and pre-wired Prometheus metrics.
-
----
-
-## Configuration
-
-```ini
-# .env
-GRPC_PORT=9090    # default: 9090
-```
-
----
-
-## What starts automatically
-
-When you run `kashvi run`, **both** servers boot:
-
-```
-🚀 Kashvi HTTP  on :8080  [env: local]  [workers: 8]
-🔌 Kashvi gRPC  on :9090
-```
-
-At shutdown (`Ctrl+C`), the gRPC server drains in-flight RPCs before exiting.
-
----
-
-## Built-in interceptors (applied automatically)
-
-| Order | Interceptor | What it does |
-|-------|-------------|--------------|
-| 1 | **Recovery** | Catches panics → returns `INTERNAL` status instead of crashing |
-| 2 | **Logging** | Logs every RPC: `method`, `duration_ms`, `code` |
-| 3 | **Prometheus** | `grpc_server_handled_total`, `grpc_server_handling_seconds` |
-
----
-
-## Built-in services
-
-### Health (grpc.health.v1.Health)
-
-Always returns `SERVING`. Test with:
-
-```bash
-# brew install grpcurl
-grpcurl -plaintext localhost:9090 grpc.health.v1.Health/Check
-# → { "status": "SERVING" }
-```
-
-### Server Reflection
-
-Enabled automatically — `grpcurl` works without proto files:
-
-```bash
-grpcurl -plaintext localhost:9090 list
-# → grpc.health.v1.Health
-```
-
----
-
-## Registering your own service
-
-```go
-// pkg/grpc/server.go  — add after reflection.Register(srv)
-mypb.RegisterUserServiceServer(srv, &UserServiceImpl{})
-```
-
-Or call `grpc.Start()` manually and register before the goroutine runs:
-
-```go
-grpcSrv, lis, _ := kashvigrpc.Start(config.GRPCPort())
-mypb.RegisterUserServiceServer(grpcSrv, &UserServiceImpl{})
-```
-
----
-
-## Standalone gRPC server (CLI)
-
-Run the gRPC server without the HTTP server:
-
-```bash
-kashvi grpc:serve
-```
-
----
-
-## Adding a custom interceptor
-
-Edit `pkg/grpc/server.go` — add to `chainUnary(...)`:
-
-```go
-grpc.NewServer(
-    grpc.UnaryInterceptor(
-        chainUnary(
-            recoveryInterceptor,
-            loggingInterceptor,
-            metricsInterceptor,
-            myAuthInterceptor,  // ← add here
-        ),
-    ),
-)
-```
-
----
-
-## Prometheus metrics
-
-The gRPC metrics are available on the existing `/metrics` endpoint alongside HTTP metrics:
-
-```
-grpc_server_handled_total{grpc_method="/grpc.health.v1.Health/Check", grpc_code="OK"} 7
-grpc_server_handling_seconds_bucket{grpc_method="...", le="0.01"} 7
-```
-
-
----
-
-# MongoDB Log Storage
-
-Kashvi can mirror all application logs to **MongoDB** in addition to stdout. The integration is:
-
-- **Async** — writes never block the request path
-- **Batched** — up to 50 documents per `InsertMany`
-- **Graceful** — remaining records are flushed before the server exits
-- **Optional** — leave `MONGO_URI` blank to stay stdout-only (zero overhead)
-
----
-
-## Configuration
-
-```ini
-# .env
-MONGO_URI=mongodb://localhost:27017   # required to enable; leave blank to disable
-MONGO_LOG_DB=kashvi_logs              # default: kashvi_logs
-MONGO_LOG_COLLECTION=app_logs         # default: app_logs
-```
-
-With a MongoDB Atlas cluster:
-
-```ini
-MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/?retryWrites=true
-```
-
----
-
-## Document shape
-
-Each log record in MongoDB:
-
-```json
-{
-  "time":       "2026-02-25T12:00:00Z",
-  "level":      "INFO",
-  "msg":        "user registered",
-  "request_id": "a1b2c3d4",
-  "attrs": {
-    "email": "user@example.com",
-    "plan":  "pro"
-  }
-}
-```
-
-A `{time: -1}` index is created on startup for efficient querying.
-
----
-
-## Querying logs
-
-```js
-// mongosh — last 100 errors
-db.app_logs.find({ level: "ERROR" }).sort({ time: -1 }).limit(100)
-
-// All logs from a specific request
-db.app_logs.find({ request_id: "a1b2c3d4" })
-
-// Logs from the last hour
-db.app_logs.find({ time: { $gt: new Date(Date.now() - 3600_000) } })
-```
-
----
-
-## TTL (auto-delete old logs)
-
-Add a TTL index in MongoDB to keep only N days of logs:
-
-```js
-db.app_logs.createIndex(
-  { time: 1 },
-  { expireAfterSeconds: 30 * 24 * 3600 }  // 30 days
-)
-```
-
----
-
-## Graceful flush on shutdown
-
-`logger.CloseMongoHandler()` is called automatically during `kashvi run` shutdown.
-If you start the server manually, call it yourself:
-
-```go
-defer logger.CloseMongoHandler()
-```
-
----
-
-## Internal design
-
-| Detail | Value |
-|--------|-------|
-| Channel buffer | 4096 records |
-| Batch size | 50 documents per InsertMany |
-| Flush ticker | Every 2 seconds |
-| On queue full | Record silently dropped — logging never blocks |
-| Connection pool | Max 10 MongoDB connections |
-| Connect timeout | 5 seconds (falls back to stdout if unreachable) |
-
-If MongoDB is unreachable at startup, Kashvi logs a warning to stdout and continues without MongoDB — it never fails to start.
-
-
 ---
 
+# API Reference Addendum
+
+The following packages, types, and functions are part of Kashvi's public API.
+
+## `pkg/collection`
+A generic slice/collection manipulation package.
+- `Chunk[T any](s []T, size int) [][]T`: Splits a slice into groups of the given size.
+- `Contains[T any](s []T, fn func(T) bool) bool`: Checks if any element satisfies the predicate.
+- `Flatten[T any](s [][]T) []T`: Flattens a 2D slice into a 1D slice.
+- `GroupBy[T any](s []T, fn func(T) string) map[string][]T`: Groups elements based on a string key function.
+- `KeyBy[T any, K comparable](s []T, fn func(T) K) map[K]T`: Creates a map from a slice using the provided key function.
+- `Pluck[T, R any](s []T, fn func(T) R) []R`: Extracts a slice of values by applying a function to each element.
+- `Reduce[T, R any](s []T, initial R, fn func(carry R, item T) R) R`: Reduces a slice to a single value.
+- `Reject[T any](s []T, fn func(T) bool) []T`: Returns elements that do not satisfy the predicate.
+- `Reverse[T any](s []T) []T`: Reverses the slice in place.
+- `SortBy[T any](s []T, less func(a, b T) bool) []T`: Sorts the slice based on a less function.
+- `Sum[T any](s []T, fn func(T) float64) float64`: Calculates the sum of elements using a numeric extractor.
+- `Take[T any](s []T, n int) []T`: Returns the first `n` elements.
+- `UniqueBy[T any, K comparable](s []T, fn func(T) K) []T`: Returns a slice of unique elements based on a key extraction function.
+
+## `pkg/crypt`
+Cryptographic utilities.
+- `Encrypt(plaintext string) (string, error)` / `Decrypt(encoded string) (string, error)`: String encryption.
+- `EncryptBytes` / `DecryptBytes`: Byte slice encryption.
+- `EncryptJSON` / `DecryptJSON`: JSON struct encryption.
+
+## `pkg/testkit`
+Additional testing utilities mapping to test configuration and mocking.
+- `ActivateFuncMocks`: Sets up scenario-based mock functions.
+- `AssertJSONBody`, `AssertStatusCode`, `AssertMocksAllCalled`: Assertions used internally by scenario runner.
+- Scenario parsing: `LoadScenarioArray`, `LoadAllFromDir`.
+
+## `pkg/cache` (Missing Methods)
+- `Forget(key string) error`: Removes an item from the cache.
+
+## `pkg/session`
+Session management.
+- `Session`: The core session interface/struct.
+- `Options` / `DefaultOptions`: Configuration for cookies and lifetimes.
+- `Flash`, `GetFlash`: Flash messages for one-time display.
+- `FromCtx(c *ctx.Context)`: Retrieve session from request context.
+- `Invalidate(ctx context.Context)`: Destroy the session.
+
+## `pkg/schedule` (Additional Features)
+- `Before`, `WithoutOverlapping`: Task constraints.
+- `Daily`, `Weekly`, `Hourly`, `EveryMinute`, `Days`: Scheduling frequencies.
+
+
+## `pkg/middleware`
+Common HTTP middlewares included in the framework. These wrap standard Go `http.Handler`s and can be applied globally or per-route group.
+- `CORS(opts CORSOptions)`: Enables Cross-Origin Resource Sharing. `DefaultCORSOptions()` returns permissive settings.
+- `RateLimit(max int, window time.Duration)`: In-memory IP-based rate limiting. Example: `RateLimit(100, time.Minute)`.
+- `Logger(next http.Handler)`: Structured request logging.
+- `Recovery(next http.Handler)`: Recovers from panics and returns a 500 error.
+- `AuthMiddleware(next http.Handler)`: JWT token validation.
+- `RoleFromCtx(r *http.Request)` / `UserIDFromCtx(r *http.Request)`: Helpers to pull attached JWT claims out of the request context.
