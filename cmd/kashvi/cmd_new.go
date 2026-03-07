@@ -75,12 +75,13 @@ func createInitialFiles(projectPath, projectName string) error {
 
 import (
 	"github.com/shashiranjanraj/kashvi/pkg/app"
-
-	_ "` + projectName + `/app/routes"
+	"` + projectName + `/app/routes"
 )
 
 func main() {
-	app.Run()
+	app.New().
+		Routes(routes.RegisterRoutes).
+		Run()
 }
 `
 	if err := os.WriteFile(filepath.Join(projectPath, "main.go"), []byte(mainData), 0o644); err != nil {
@@ -90,25 +91,22 @@ func main() {
 	routesData := `package routes
 
 import (
-	"github.com/shashiranjanraj/kashvi/pkg/core"
 	"github.com/shashiranjanraj/kashvi/pkg/ctx"
 	"github.com/shashiranjanraj/kashvi/pkg/router"
 )
 
-func init() {
-	core.RegisterRoutes(func(r *router.Router) {
-		r.Get("/", "home", ctx.Wrap(func(c *ctx.Context) {
-			c.Success(map[string]any{
-				"message": "Welcome to Kashvi! Fast like Go, Elegant like Laravel.",
-				"version": "1.0",
-			})
-		}))
-		
-		api := r.Group("/api")
-		api.Get("/ping", "api.ping", ctx.Wrap(func(c *ctx.Context) {
-			c.Success(map[string]any{"status": "ok"})
-		}))
-	})
+func RegisterRoutes(r *router.Router) {
+	r.Get("/", "home", ctx.Wrap(func(c *ctx.Context) {
+		c.Success(map[string]any{
+			"message": "Welcome to Kashvi! Fast like Go, Elegant like Laravel.",
+			"version": "1.0",
+		})
+	}))
+	
+	api := r.Group("/api")
+	api.Get("/ping", "api.ping", ctx.Wrap(func(c *ctx.Context) {
+		c.Success(map[string]any{"status": "ok"})
+	}))
 }
 `
 	if err := os.WriteFile(filepath.Join(projectPath, "app", "routes", "api.go"), []byte(routesData), 0o644); err != nil {
