@@ -239,7 +239,30 @@ type Product struct {
 }
 ```
 
-### Step 3: Update the Controller (1 minute)
+### Step 3: Define the Migration (1 minute)
+
+Edit `database/migrations/20240101000000_create_products_table.go`:
+
+```go
+package migrations
+
+import (
+    "github.com/shashiranjanraj/kashvi/app/models"
+    "gorm.io/gorm"
+)
+
+type CreateProductsTable struct{}
+
+func (m *CreateProductsTable) Up(db *gorm.DB) error {
+    return db.AutoMigrate(&models.Product{})
+}
+
+func (m *CreateProductsTable) Down(db *gorm.DB) error {
+    return db.Migrator().DropTable("products")
+}
+```
+
+### Step 4: Update the Controller (1 minute)
 
 Edit `app/controllers/product_controller.go`:
 
@@ -337,7 +360,7 @@ func (c *ProductController) Destroy(ctx *appctx.Context) {
 }
 ```
 
-### Step 4: Register Routes (1 minute)
+### Step 5: Register Routes (1 minute)
 
 Add to your routes in `main.go` or `app/routes/api.go`:
 
@@ -352,7 +375,7 @@ api.Put("/products/{id}", "products.update", ctx.Wrap(ctrl.Update))
 api.Delete("/products/{id}", "products.destroy", ctx.Wrap(ctrl.Destroy))
 ```
 
-### Step 5: Run Migrations and Test (1 minute)
+### Step 6: Run Migrations and Test (1 minute)
 
 ```bash
 kashvi migrate
