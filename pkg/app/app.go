@@ -117,6 +117,8 @@ func (a *Application) Run() {
 		err = cmdSeed(allSeeders)
 	case "route:list", "routes":
 		err = cmdRouteList(a)
+	case "version", "-v", "--version":
+		fmt.Printf("Kashvi Framework v%s\n", Version)
 	case "help", "--help", "-h":
 		printHelp()
 	default:
@@ -156,6 +158,7 @@ Commands:
   migrate:status   Show migration status
   seed             Run all registered database seeders
   route:list       List registered API routes
+  version          Print the framework version
 
 `)
 }
