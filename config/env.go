@@ -159,6 +159,9 @@ func MongoLogCollection() string { _ = Load(); return get("MONGO_LOG_COLLECTION"
 // GRPCPort returns the port the gRPC server listens on.
 func GRPCPort() string { _ = Load(); return get("GRPC_PORT", "9090") }
 
+// GRPCEnabled returns true if the gRPC server should be started.
+func GRPCEnabled() bool { _ = Load(); return get("GRPC_ENABLED", "false") == "true" }
+
 // ── Concurrency ───────────────────────────────────────────────────────────────
 
 // WorkerPoolSize returns the bounded goroutine pool size.

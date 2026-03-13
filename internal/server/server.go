@@ -17,6 +17,7 @@ import (
 	"github.com/shashiranjanraj/kashvi/pkg/logger"
 	"github.com/shashiranjanraj/kashvi/pkg/queue"
 	"github.com/shashiranjanraj/kashvi/pkg/storage"
+	"google.golang.org/grpc"
 )
 
 // Start boots the HTTP + gRPC servers, runs until SIGINT/SIGTERM, then shuts
@@ -85,11 +86,15 @@ func Start(handler http.Handler) error {
 
 	// ── gRPC server ─────────────────────────────────────────────────────────
 
-	grpcSrv, _, grpcErr := kashvigrpc.Start(config.GRPCPort())
-	if grpcErr != nil {
-		logger.Warn("grpc: server failed to start, HTTP-only mode", "error", grpcErr)
-	} else {
-		fmt.Printf("🔌 Kashvi gRPC  on :%s\n", config.GRPCPort())
+	var grpcSrv *grpc.Server
+	if config.GRPCEnabled() {
+		srv, _, grpcErr := kashvigrpc.Start(config.GRPCPort())
+		grpcSrv = srv
+		if grpcErr != nil {
+			logger.Warn("grpc: server failed to start, HTTP-only mode", "error", grpcErr)
+		} else {
+			fmt.Printf("🔌 Kashvi gRPC  on :%s\n", config.GRPCPort())
+		}
 	}
 
 	// ── Wait for shutdown signal ─────────────────────────────────────────────
@@ -108,7 +113,9 @@ func Start(handler http.Handler) error {
 	httpErr := srv.Shutdown(ctx)
 
 	// Graceful gRPC shutdown.
-	kashvigrpc.Stop(grpcSrv)
+	if grpcSrv != nil {
+		kashvigrpc.Stop(grpcSrv)
+	}
 
 	// Flush MongoDB log handler.
 	logger.CloseMongoHandler()
