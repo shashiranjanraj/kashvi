@@ -29,7 +29,7 @@ func Recovery(next http.Handler) http.Handler {
 					"method", r.Method,
 					"path", r.URL.Path,
 				)
-				response.Error(w, http.StatusInternalServerError, "Internal Server Error")
+				response.Error(w, http.StatusInternalServerError, fmt.Sprintf("Internal Server Error: %v", err))
 			}
 		}()
 		next.ServeHTTP(w, r)
