@@ -10,7 +10,9 @@ import (
 
 // Query is a chainable, immutable query builder wrapping gorm.DB.
 type Query struct {
-	db *gorm.DB
+	db           *gorm.DB
+	Error        error
+	RowsAffected int64
 }
 
 // Pagination holds metadata for a paginated response.
@@ -28,19 +30,30 @@ func DB() *Query {
 	return &Query{db: database.DB}
 }
 
+// String implements fmt.Stringer to ensure the query doesn't print as a pointer address.
+func (q *Query) String() string {
+	if q.Error != nil {
+		return q.Error.Error()
+	}
+	return "orm.Query"
+}
+
 // Model sets the model for the query (table resolution).
 func (q *Query) Model(v interface{}) *Query {
-	return &Query{db: q.db.Model(v)}
+	db := q.db.Model(v)
+	return &Query{db: db, Error: db.Error}
 }
 
 // Where appends a WHERE clause.
 func (q *Query) Where(query string, args ...interface{}) *Query {
-	return &Query{db: q.db.Where(query, args...)}
+	db := q.db.Where(query, args...)
+	return &Query{db: db, Error: db.Error}
 }
 
 // OrderBy appends an ORDER BY clause. dir should be "asc" or "desc".
 func (q *Query) OrderBy(col, dir string) *Query {
-	return &Query{db: q.db.Order(col + " " + dir)}
+	db := q.db.Order(col + " " + dir)
+	return &Query{db: db, Error: db.Error}
 }
 
 // Select limits the fetched columns.
@@ -49,24 +62,28 @@ func (q *Query) Select(fields ...string) *Query {
 	for i, f := range fields[1:] {
 		args[i] = f
 	}
-	return &Query{db: q.db.Select(fields[0], args...)}
+	db := q.db.Select(fields[0], args...)
+	return &Query{db: db, Error: db.Error}
 }
 
 // Joins adds a JOIN clause.
 func (q *Query) Joins(query string, args ...interface{}) *Query {
-	return &Query{db: q.db.Joins(query, args...)}
+	db := q.db.Joins(query, args...)
+	return &Query{db: db, Error: db.Error}
 }
 
 // With eager-loads the named association (GORM Preload).
 func (q *Query) With(assoc string) *Query {
-	return &Query{db: q.db.Preload(assoc)}
+	db := q.db.Preload(assoc)
+	return &Query{db: db, Error: db.Error}
 }
 
 // Paginate applies OFFSET/LIMIT for page-based pagination.
 func (q *Query) Paginate(page, limit int) *Query {
 	page, limit = normalizePagination(page, limit)
 	offset := (page - 1) * limit
-	return &Query{db: q.db.Offset(offset).Limit(limit)}
+	db := q.db.Offset(offset).Limit(limit)
+	return &Query{db: db, Error: db.Error}
 }
 
 // ---------- Read ----------
