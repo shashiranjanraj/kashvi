@@ -8,6 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 	"github.com/shashiranjanraj/kashvi/config"
+	applogger "github.com/shashiranjanraj/kashvi/pkg/logger"
 )
 
 var RDB *redis.Client
@@ -26,6 +27,8 @@ func Connect() error {
 		RDB = nil // mark as unavailable so Get/Set/Del no-op safely
 		return fmt.Errorf("cache: redis ping: %w", err)
 	}
+
+	applogger.Info("cache connected", "driver", "redis")
 	return nil
 }
 

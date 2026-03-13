@@ -17,10 +17,11 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"net"
 	"runtime/debug"
 	"time"
+
+	"github.com/shashiranjanraj/kashvi/pkg/logger"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -59,7 +60,7 @@ func recoveryInterceptor(
 ) (resp interface{}, err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			slog.Error("grpc: panic recovered",
+			logger.Error("grpc: panic recovered",
 				"method", info.FullMethod,
 				"panic", r,
 				"stack", string(debug.Stack()),
@@ -86,7 +87,7 @@ func loggingInterceptor(
 		code = status.Code(err)
 	}
 
-	slog.Info("grpc: request",
+	logger.Info("grpc: request",
 		"method", info.FullMethod,
 		"duration_ms", dur.Milliseconds(),
 		"code", code.String(),
@@ -192,11 +193,11 @@ func Start(port string) (*grpc.Server, net.Listener, error) {
 	// Enable server reflection so tools like grpcurl work without proto files.
 	reflection.Register(srv)
 
-	slog.Info("gRPC server starting", "addr", addr)
+	logger.Info("gRPC server starting", "addr", addr)
 
 	go func() {
 		if err := srv.Serve(lis); err != nil {
-			slog.Error("grpc: serve error", "error", err)
+			logger.Error("grpc: serve error", "error", err)
 		}
 	}()
 
@@ -209,6 +210,6 @@ func Stop(srv *grpc.Server) {
 	if srv == nil {
 		return
 	}
-	slog.Info("gRPC server shutting down")
+	logger.Info("gRPC server shutting down")
 	srv.GracefulStop()
 }

@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/shashiranjanraj/kashvi/config"
+	applogger "github.com/shashiranjanraj/kashvi/pkg/logger"
 	"gorm.io/driver/mysql"
 	"gorm.io/driver/postgres"
 	"gorm.io/driver/sqlite"
@@ -62,6 +63,8 @@ func Connect() error {
 	if err := sqlDB.Ping(); err != nil {
 		return fmt.Errorf("database: ping: %w", err)
 	}
+
+	applogger.Info("database connected", "driver", driver)
 
 	return nil
 }
