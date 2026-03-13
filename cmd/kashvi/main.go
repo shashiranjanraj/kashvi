@@ -54,4 +54,5 @@ func init() {
 	rootCmd.AddCommand(makeMigrationCmd)
 	rootCmd.AddCommand(makeSeederCmd)
 	rootCmd.AddCommand(makeResourceCmd)
+	rootCmd.AddCommand(versionCmd)
 }
