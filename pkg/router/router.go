@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/shashiranjanraj/kashvi/pkg/logger"
 )
 
 type Middleware func(http.Handler) http.Handler
@@ -128,6 +129,7 @@ func (r *Router) mount(method, path, name string, handler http.HandlerFunc, midd
 	r.mux.Method(method, fullPath, h)
 
 	if name == "" {
+		logger.Debug("Route registered", "method", method, "path", fullPath)
 		return
 	}
 
@@ -135,6 +137,7 @@ func (r *Router) mount(method, path, name string, handler http.HandlerFunc, midd
 	defer r.mu.Unlock()
 	r.routes[name] = fullPath
 	r.infos = append(r.infos, RouteInfo{Method: method, Path: fullPath, Name: name})
+	logger.Debug("Named route registered", "method", method, "path", fullPath, "name", name)
 }
 
 func (g *Group) Group(prefix string, middlewares ...Middleware) *Group {
@@ -176,6 +179,7 @@ func (g *Group) mount(method, path, name string, handler http.HandlerFunc, middl
 	g.router.mux.Method(method, fullPath, h)
 
 	if name == "" {
+		logger.Debug("Group route registered", "method", method, "path", fullPath)
 		return
 	}
 
@@ -183,6 +187,7 @@ func (g *Group) mount(method, path, name string, handler http.HandlerFunc, middl
 	defer g.router.mu.Unlock()
 	g.router.routes[name] = fullPath
 	g.router.infos = append(g.router.infos, RouteInfo{Method: method, Path: fullPath, Name: name})
+	logger.Debug("Named group route registered", "method", method, "path", fullPath, "name", name)
 }
 
 func chain(handler http.Handler, middlewares ...Middleware) http.Handler {

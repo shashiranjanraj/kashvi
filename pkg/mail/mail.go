@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/shashiranjanraj/kashvi/config"
+	"github.com/shashiranjanraj/kashvi/pkg/logger"
 )
 
 // ------------------- Config -------------------
@@ -155,11 +156,26 @@ func (m *Message) Send() error {
 	addr := cfg.Host + ":" + cfg.Port
 	auth := smtp.PlainAuth("", cfg.Username, cfg.Password, cfg.Host)
 
+	logger.Debug("mail: dispatching email", "to", len(allTo), "subject", m.subject, "host", cfg.Host)
+
 	// Use TLS for port 465, STARTTLS for 587/25.
 	if cfg.Port == "465" {
-		return m.sendTLS(addr, auth, cfg.From, allTo, raw, cfg.Host)
+		err := m.sendTLS(addr, auth, cfg.From, allTo, raw, cfg.Host)
+		if err == nil {
+			logger.Debug("mail: email sent (TLS)")
+		} else {
+			logger.Error("mail: send failed (TLS)", "error", err)
+		}
+		return err
 	}
-	return smtp.SendMail(addr, auth, cfg.From, allTo, raw)
+	
+	err := smtp.SendMail(addr, auth, cfg.From, allTo, raw)
+	if err == nil {
+		logger.Debug("mail: email sent")
+	} else {
+		logger.Error("mail: send failed", "error", err)
+	}
+	return err
 }
 
 func (m *Message) sendTLS(addr string, auth smtp.Auth, from string, to []string, raw []byte, host string) error {

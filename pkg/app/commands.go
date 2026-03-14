@@ -8,29 +8,41 @@ import (
 
 	"github.com/shashiranjanraj/kashvi/config"
 	"github.com/shashiranjanraj/kashvi/pkg/database"
+	"github.com/shashiranjanraj/kashvi/pkg/logger"
 	"github.com/shashiranjanraj/kashvi/pkg/migration"
 	"github.com/shashiranjanraj/kashvi/pkg/router"
 )
 
 // cmdServe boots the HTTP + gRPC servers using the Application's handler.
 func cmdServe(a *Application) error {
+	logger.Info("Starting Kashvi server...")
 	return startServer(a)
 }
 
 // cmdMigrate runs all pending migrations.
 func cmdMigrate() error {
+	logger.Info("Starting database migrations...")
 	if err := bootDB(); err != nil {
 		return err
 	}
-	return migration.New(database.DB).Run()
+	err := migration.New(database.DB).Run()
+	if err == nil {
+		logger.Info("Migrations completed successfully.")
+	}
+	return err
 }
 
 // cmdMigrateRollback reverses the last migration batch.
 func cmdMigrateRollback() error {
+	logger.Info("Rolling back last migration batch...")
 	if err := bootDB(); err != nil {
 		return err
 	}
-	return migration.New(database.DB).Rollback()
+	err := migration.New(database.DB).Rollback()
+	if err == nil {
+		logger.Info("Rollback completed successfully.")
+	}
+	return err
 }
 
 // cmdMigrateStatus prints migration status.
@@ -43,6 +55,7 @@ func cmdMigrateStatus() error {
 
 // cmdSeed runs all registered seeders (global + per-application).
 func cmdSeed(seeders []SeederFunc) error {
+	logger.Info("Starting database seeders...", "count", len(seeders))
 	if err := bootDB(); err != nil {
 		return err
 	}
@@ -53,6 +66,7 @@ func cmdSeed(seeders []SeederFunc) error {
 	for _, fn := range seeders {
 		fn()
 	}
+	logger.Info(fmt.Sprintf("Seeding complete (%d seeders ran)", len(seeders)))
 	fmt.Printf("✅ Seeding complete (%d seeders ran)\n", len(seeders))
 	return nil
 }

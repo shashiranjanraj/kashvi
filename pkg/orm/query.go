@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/shashiranjanraj/kashvi/pkg/database"
+	"github.com/shashiranjanraj/kashvi/pkg/logger"
 	"gorm.io/gorm"
 )
 
@@ -128,8 +129,10 @@ func (q *Query) Cache(key string, ttl time.Duration, dest interface{}) error {
 	// Import-cycle-safe: import cache inline only through the registered interface.
 	// Direct cache use is done via the CacheStore variable below (set at boot).
 	if CacheStore != nil && CacheStore.Get(key, dest) {
+		logger.Debug("orm: cache hit", "key", key)
 		return nil
 	}
+	logger.Debug("orm: cache miss", "key", key)
 
 	if err := q.db.Find(dest).Error; err != nil {
 		return err

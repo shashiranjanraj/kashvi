@@ -121,7 +121,11 @@ func (m *Manager) push(job Job) error {
 	d := m.driver
 	m.mu.RUnlock()
 
-	return d.Push(env)
+	err = d.Push(env)
+	if err == nil {
+		logger.Debug("queue: job enqueued", "type", typeName)
+	}
+	return err
 }
 
 // ------------------- Worker -------------------

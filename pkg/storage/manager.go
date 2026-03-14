@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/shashiranjanraj/kashvi/config"
+	"github.com/shashiranjanraj/kashvi/pkg/logger"
 )
 
 // ─── Manager ──────────────────────────────────────────────────────────────────
@@ -24,14 +25,17 @@ func Connect() {
 
 	// Always boot local disk.
 	disks["local"] = newLocalDisk()
+	logger.Info("storage: local disk initialized")
 
 	// Boot S3 disk only if bucket is configured.
 	if config.Get("S3_BUCKET", "") != "" {
 		d, err := newS3Disk()
 		if err != nil {
+			logger.Warn("storage: s3 initialization failed (disk disabled)", "error", err)
 			fmt.Printf("⚠️  storage/s3: %v (disk disabled)\n", err)
 		} else {
 			disks["s3"] = d
+			logger.Info("storage: s3 disk initialized")
 		}
 	}
 }
