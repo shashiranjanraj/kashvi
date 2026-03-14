@@ -39,6 +39,8 @@ Kashvi follows a layered architecture with a **repository layer** so controllers
 
 Controllers and services depend on **repositories** (e.g. `UserRepository`) instead of `orm.DB()`. Repositories expose methods like `FindByID`, `All`, `Create`, `Update`, `Delete` and keep all data access in one place.
 
+For a detailed diagram of how a request travels through Kashvi (all middleware and handler flow), see **[docs/REQUEST_FLOW.md](docs/REQUEST_FLOW.md)**. For how the design aligns with **SOLID** principles, see **[docs/SOLID_PRINCIPLES.md](docs/SOLID_PRINCIPLES.md)**. To run and interpret **benchmarks**, see **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
+
 ## Installation
 
 ### 1. Install Go
