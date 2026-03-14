@@ -1,0 +1,17 @@
+package repositories
+
+import (
+	"{{.Module}}/app/models"
+	"github.com/shashiranjanraj/kashvi/pkg/repository"
+)
+
+// {{.Name}}Repository handles data access for {{.Name}}.
+// Controllers and services use this instead of calling orm directly.
+type {{.Name}}Repository struct {
+	repository.Base[models.{{.Name}}]
+}
+
+// New{{.Name}}Repository returns a new {{.Name}}Repository.
+func New{{.Name}}Repository() *{{.Name}}Repository {
+	return &{{.Name}}Repository{}
+}

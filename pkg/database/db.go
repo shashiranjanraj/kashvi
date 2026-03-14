@@ -18,8 +18,12 @@ var DB *gorm.DB
 
 // Connect opens the database and configures the connection pool.
 // Returns an error instead of calling log.Fatal so the caller can
-// shut down gracefully.
+// shut down gracefully. Safe to call multiple times; subsequent calls
+// no-op if already connected (so auto-migrate can run after first connect).
 func Connect() error {
+	if DB != nil {
+		return nil
+	}
 	driver := config.DatabaseDriver()
 	dsn := config.DatabaseDSN()
 

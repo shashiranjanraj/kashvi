@@ -21,25 +21,29 @@ Kashvi is a Laravel-inspired Go web framework designed for rapid application dev
 
 ### Architecture
 
-Kashvi follows a layered architecture:
+Kashvi follows a layered architecture with a **repository layer** so controllers and services do not call the ORM directly:
 
 ```
 ┌─────────────────┐
-│   Controllers   │ ← Handle HTTP requests, call services
+│   Controllers   │ ← Handle HTTP, call services or repositories
 ├─────────────────┤
-│    Services     │ ← Business logic layer
+│    Services     │ ← Business logic (optional)
 ├─────────────────┤
-│     Models      │ ← Data models and ORM
+│  Repositories   │ ← Data access; encapsulate orm/DB calls
+├─────────────────┤
+│     Models      │ ← Data structures (GORM models)
 ├─────────────────┤
 │   Database      │ ← GORM with migrations
 └─────────────────┘
 ```
 
+Controllers and services depend on **repositories** (e.g. `UserRepository`) instead of `orm.DB()`. Repositories expose methods like `FindByID`, `All`, `Create`, `Update`, `Delete` and keep all data access in one place.
+
 ## Installation
 
 ### 1. Install Go
 
-Ensure you have Go 1.25 or later installed.
+Ensure you have Go 1.22 or later installed.
 
 ### 2. Install Kashvi CLI
 
@@ -174,6 +178,8 @@ Register with `ctx.Wrap`:
 r.Get("/users/{id}", "users.show", ctx.Wrap(GetUser))
 ```
 
+**Handler styles:** Use `ctx.Wrap` for handlers that accept `*ctx.Context` and call `c.Success`, `c.Error`, etc. Use `router.Wrap` for handlers with signature `func(w http.ResponseWriter, r *http.Request) error`; returned errors are converted to HTTP responses via `apperror` (e.g. `apperror.NotFound("msg")`).
+
 ### Models
 
 Models are GORM structs:
@@ -203,6 +209,66 @@ orm.DB().Where("email = ?", "john@example.com").First(user)
 users, pagination := orm.DB().Paginate(1, 10).GetWithPagination(&users)
 ```
 
+### Repository layer
+
+Keep data access out of controllers by using **repositories**. Controllers and services call a repository instead of `orm.DB()` directly.
+
+Use the generic `repository.Base[T]` and embed it in a concrete repository per model:
+
+```go
+// app/repositories/user.go
+package repositories
+
+import (
+	"yourapp/app/models"
+	"github.com/shashiranjanraj/kashvi/pkg/repository"
+)
+
+type UserRepository struct {
+	repository.Base[models.User]
+}
+
+func NewUserRepository() *UserRepository {
+	return &UserRepository{}
+}
+
+// Optional: add custom queries
+func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
+	var u models.User
+	err := r.Query().Where("email = ?", email).First(&u)
+	if err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+```
+
+**Base methods:** `FindByID(id uint)`, `All()`, `Create(m *T)`, `Update(m *T)`, `Delete(id uint)`, `Exists(id uint)`, `Count()`, `Paginate(page, limit int)`, and `Query()` for custom chains. Use `Query()` for filters, joins, and scoped queries while keeping all DB access inside the repository.
+
+In your controller, inject the repository and use it:
+
+```go
+type UserController struct {
+	repo *repositories.UserRepository
+}
+
+func NewUserController(repo *repositories.UserRepository) *UserController {
+	return &UserController{repo: repo}
+}
+
+func (c *UserController) Show(ctx *appctx.Context) {
+	id, _ := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	user, err := c.repo.FindByID(uint(id))
+	if err != nil {
+		ctx.NotFound("User not found")
+		return
+	}
+	ctx.Success(user)
+}
+```
+
+`kashvi make:resource Product` generates a repository and a controller that uses it (no direct orm calls in the controller).
+
 ## 5-Minute CRUD Creation Deep Dive
 
 Let's create a complete CRUD API for a "Product" resource in 5 minutes.
@@ -215,9 +281,10 @@ kashvi make:resource Product
 
 This creates:
 - `app/models/product.go` - Product model
-- `app/controllers/product_controller.go` - CRUD controller
+- `app/repositories/product.go` - Product repository (data layer; controller uses this instead of orm)
+- `app/controllers/product_controller.go` - CRUD controller (uses repository)
 - `app/services/product_service.go` - Business logic service
-- `database/migrations/20240101000000_create_products_table.go` - Migration
+- `database/migrations/...` - Migration
 - `database/seeders/product_seeder.go` - Database seeder
 - `testdata/product_scenarios.json` - Test scenarios
 
@@ -362,10 +429,11 @@ func (c *ProductController) Destroy(ctx *appctx.Context) {
 
 ### Step 5: Register Routes (1 minute)
 
-Add to your routes in `main.go` or `app/routes/api.go`:
+Add to your routes in `main.go` or `app/routes/api.go` (controller receives the repository):
 
 ```go
-ctrl := controllers.NewProductController()
+repo := repositories.NewProductRepository()
+ctrl := controllers.NewProductController(repo)
 api := r.Group("/api")
 
 api.Get("/products", "products.index", ctx.Wrap(ctrl.Index))
@@ -424,10 +492,11 @@ curl -X DELETE http://localhost:8080/api/products/1
 
 - `kashvi make:model <Name>` - Create a model
 - `kashvi make:controller <Name>` - Create a controller
+- `kashvi make:repository <Name>` - Create a repository (data layer for a model)
 - `kashvi make:service <Name>` - Create a service
 - `kashvi make:migration <name>` - Create a migration
 - `kashvi make:seeder <Name>` - Create a seeder
-- `kashvi make:resource <Name>` - Create complete CRUD resource
+- `kashvi make:resource <Name>` - Create complete CRUD resource (model + repository + controller + service + migration + seeder)
 
 ### Background Tasks
 
@@ -741,7 +810,7 @@ kashvi build
 Create `Dockerfile`:
 
 ```dockerfile
-FROM golang:1.25-alpine AS builder
+FROM golang:1.22-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -780,6 +849,7 @@ myproject/
 ├── app/
 │   ├── controllers/
 │   ├── models/
+│   ├── repositories/
 │   ├── services/
 │   └── routes/
 ├── database/
@@ -957,7 +1027,7 @@ func Auth() func(http.Handler) http.Handler {
             }
             
             // Validate token
-            claims, err := auth.ValidateJWT(tokenString)
+            claims, err := auth.ValidateToken(tokenString)
             if err != nil {
                 http.Error(w, "Invalid token", http.StatusUnauthorized)
                 return
@@ -1594,7 +1664,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.25-alpine AS builder
+FROM golang:1.22-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless
@@ -1786,7 +1856,7 @@ func Auth() func(http.Handler) http.Handler {
             }
             
             // Validate token
-            claims, err := auth.ValidateJWT(tokenString)
+            claims, err := auth.ValidateToken(tokenString)
             if err != nil {
                 http.Error(w, "Invalid token", http.StatusUnauthorized)
                 return
@@ -2423,7 +2493,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.25-alpine AS builder
+FROM golang:1.22-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless

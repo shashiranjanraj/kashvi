@@ -51,6 +51,7 @@ func init() {
 	rootCmd.AddCommand(makeModelCmd)
 	rootCmd.AddCommand(makeControllerCmd)
 	rootCmd.AddCommand(makeServiceCmd)
+	rootCmd.AddCommand(makeRepositoryCmd)
 	rootCmd.AddCommand(makeMigrationCmd)
 	rootCmd.AddCommand(makeSeederCmd)
 	rootCmd.AddCommand(makeResourceCmd)

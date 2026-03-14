@@ -1,0 +1,93 @@
+package controllers
+
+import (
+	"net/http"
+	"strconv"
+
+	"{{.Module}}/app/models"
+	"{{.Module}}/app/repositories"
+	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
+)
+
+type {{.Name}}Controller struct {
+	repo *repositories.{{.Name}}Repository
+}
+
+// New{{.Name}}Controller returns a new {{.Name}}Controller with the given repository.
+func New{{.Name}}Controller(repo *repositories.{{.Name}}Repository) *{{.Name}}Controller {
+	return &{{.Name}}Controller{repo: repo}
+}
+
+// GET /{{.Lower}}s
+func (c *{{.Name}}Controller) Index(ctx *appctx.Context) {
+	list, err := c.repo.All()
+	if err != nil {
+		ctx.Error(http.StatusInternalServerError, "Failed to list {{.Lower}}s")
+		return
+	}
+	ctx.Success(list)
+}
+
+// POST /{{.Lower}}s
+func (c *{{.Name}}Controller) Store(ctx *appctx.Context) {
+	var input models.{{.Name}}
+	if !ctx.BindJSON(&input) {
+		return
+	}
+	if err := c.repo.Create(&input); err != nil {
+		ctx.Error(http.StatusBadRequest, "Failed to create {{.Lower}}")
+		return
+	}
+	ctx.Created(input)
+}
+
+// GET /{{.Lower}}s/{id}
+func (c *{{.Name}}Controller) Show(ctx *appctx.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.Error(http.StatusBadRequest, "Invalid ID")
+		return
+	}
+	item, err := c.repo.FindByID(uint(id))
+	if err != nil {
+		ctx.NotFound("{{.Name}} not found")
+		return
+	}
+	ctx.Success(item)
+}
+
+// PUT /{{.Lower}}s/{id}
+func (c *{{.Name}}Controller) Update(ctx *appctx.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.Error(http.StatusBadRequest, "Invalid ID")
+		return
+	}
+	item, err := c.repo.FindByID(uint(id))
+	if err != nil {
+		ctx.NotFound("{{.Name}} not found")
+		return
+	}
+	if !ctx.BindJSON(item) {
+		return
+	}
+	if err := c.repo.Update(item); err != nil {
+		ctx.Error(http.StatusBadRequest, "Failed to update {{.Lower}}")
+		return
+	}
+	ctx.Success(item)
+}
+
+// DELETE /{{.Lower}}s/{id}
+func (c *{{.Name}}Controller) Destroy(ctx *appctx.Context) {
+	id, err := strconv.ParseUint(ctx.Param("id"), 10, 32)
+	if err != nil {
+		ctx.Error(http.StatusBadRequest, "Invalid ID")
+		return
+	}
+	if err := c.repo.Delete(uint(id)); err != nil {
+		ctx.Error(http.StatusInternalServerError, "Failed to delete {{.Lower}}")
+		return
+	}
+	ctx.Status(http.StatusNoContent)
+}

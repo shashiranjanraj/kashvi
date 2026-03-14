@@ -71,8 +71,9 @@ func (q *Query) OrderBy(col, dir string) *Query {
 }
 
 // Select limits the fetched columns.
+// No-op if no fields are given (avoids panic).
 func (q *Query) Select(fields ...string) *Query {
-	if q.db == nil || q.Error != nil {
+	if q.db == nil || q.Error != nil || len(fields) == 0 {
 		return q
 	}
 	args := make([]interface{}, len(fields)-1)
@@ -113,6 +114,17 @@ func (q *Query) Paginate(page, limit int) *Query {
 }
 
 // ---------- Read ----------
+
+// Count stores the number of matching rows into the value pointed to by count.
+func (q *Query) Count(count *int64) error {
+	if q.Error != nil {
+		return q.Error
+	}
+	if q.db == nil {
+		return errors.New("database connection not initialized")
+	}
+	return q.db.Count(count).Error
+}
 
 // Get fetches all matching rows into dest.
 func (q *Query) Get(dest interface{}) error {

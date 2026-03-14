@@ -19,6 +19,7 @@ type StubData struct {
 	StructName string // e.g. M_202301010000_create_users_table
 	Authorize  bool   // Add Auth middleware/behavior
 	Cache      bool   // Add Cache middleware/behavior
+	Module     string // Go module path from go.mod (for imports in app/repositories, etc.)
 }
 
 // renderStub locates the stub (user override first, embedded fallback)
