@@ -1,5 +1,17 @@
 package seeders
 
-import "gorm.io/gorm"
+import (
+	"github.com/shashiranjanraj/kashvi/pkg/app"
+{{ if .Module }}
+	"{{.Module}}/app/models"
+	"github.com/shashiranjanraj/kashvi/pkg/database"
+{{ end }}
+)
 
-func {{.Name}}(db *gorm.DB) error { return nil }
+func init() {
+	app.RegisterSeeder("{{.Lower}}s", func() {
+{{ if .Module }}		// Add seed records; edit the slice literal as needed
+		database.DB.Create(&[]models.{{.ResourceName}}{})
+{{ else }}		// Add seed data; use database.DB when needed
+{{ end }}	})
+}

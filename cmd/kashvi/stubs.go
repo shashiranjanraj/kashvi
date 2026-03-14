@@ -14,12 +14,14 @@ var defaultStubs embed.FS
 
 // StubData holds variables passed to the .stub templates
 type StubData struct {
-	Name       string
-	Lower      string
-	StructName string // e.g. M_202301010000_create_users_table
-	Authorize  bool   // Add Auth middleware/behavior
-	Cache      bool   // Add Cache middleware/behavior
-	Module     string // Go module path from go.mod (for imports in app/repositories, etc.)
+	Name         string
+	Lower        string
+	StructName   string // e.g. M_202301010000_create_users_table
+	Authorize    bool   // Add Auth middleware/behavior
+	Cache        bool   // Add Cache middleware/behavior
+	Module       string // Go module path from go.mod (for imports)
+	ResourceName string // Entity name for repo/model (e.g. Product); used by service, seeder
+	ModelName    string // Model name for migration AutoMigrate (e.g. Product)
 }
 
 // renderStub locates the stub (user override first, embedded fallback)

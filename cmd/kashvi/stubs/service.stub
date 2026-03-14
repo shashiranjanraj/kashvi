@@ -1,5 +1,22 @@
 package services
 
+{{ if .Module }}
+import (
+	"{{.Module}}/app/repositories"
+)
+
+// {{.Name}} holds business logic for {{.ResourceName}}; uses repository instead of orm directly.
+type {{.Name}} struct {
+	repo *repositories.{{.ResourceName}}Repository
+}
+
+// New{{.Name}} returns a new {{.Name}} with the given repository.
+func New{{.Name}}(repo *repositories.{{.ResourceName}}Repository) *{{.Name}} {
+	return &{{.Name}}{repo: repo}
+}
+{{ else }}
+// {{.Name}} — add business logic here. For repo-based logic use make:resource (generates service with repository).
 type {{.Name}} struct{}
 
 func New{{.Name}}() *{{.Name}} { return &{{.Name}}{} }
+{{ end }}

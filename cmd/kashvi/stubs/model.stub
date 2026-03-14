@@ -2,6 +2,7 @@ package models
 
 import "gorm.io/gorm"
 
+// {{.Name}} — add fields and gorm/json tags as needed (e.g. Name string `json:"name" gorm:"not null"`).
 type {{.Name}} struct {
 	gorm.Model
 }

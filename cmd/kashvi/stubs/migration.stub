@@ -1,7 +1,8 @@
 package migrations
 
 import (
-	"github.com/shashiranjanraj/kashvi/pkg/migration"
+{{ if .ModelName }}	"{{.Module}}/app/models"
+{{ end }}	"github.com/shashiranjanraj/kashvi/pkg/migration"
 	"gorm.io/gorm"
 )
 
@@ -9,5 +10,12 @@ func init() { migration.Register("{{.Name}}", &{{.StructName}}{}) }
 
 type {{.StructName}} struct{}
 
-func (m *{{.StructName}}) Up(db *gorm.DB) error   { return nil }
-func (m *{{.StructName}}) Down(db *gorm.DB) error { return nil }
+func (m *{{.StructName}}) Up(db *gorm.DB) error {
+{{ if .ModelName }}	return db.AutoMigrate(&models.{{.ModelName}}{})
+{{ else }}	return nil
+{{ end }}}
+
+func (m *{{.StructName}}) Down(db *gorm.DB) error {
+{{ if .ModelName }}	return db.Migrator().DropTable("{{.Lower}}s")
+{{ else }}	return nil
+{{ end }}}

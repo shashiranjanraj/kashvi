@@ -1,5 +1,17 @@
 [
   {
+    "name": "Test{{.Name}}ListSuccess",
+    "description": "Verify listing {{.Lower}}s",
+    "requestUrl": "/{{.Lower}}s",
+    "requestMethod": "GET",
+    "responseFileName": "{{.Lower}}_list_res.json",
+    "expectedStatusCode": 200,
+    "isMockRequired": false{{ if .Authorize }},
+    "headers": {
+      "Authorization": "Bearer dummy-jwt-token"
+    }{{ end }}
+  },
+  {
     "name": "Test{{.Name}}CreateSuccess",
     "description": "Verify successful creation of a {{.Name}}",
     "requestUrl": "/{{.Lower}}s",
@@ -19,6 +31,30 @@
     "requestMethod": "GET",
     "responseFileName": "{{.Lower}}_get_res.json",
     "expectedStatusCode": 200,
+    "isMockRequired": false{{ if .Authorize }},
+    "headers": {
+      "Authorization": "Bearer dummy-jwt-token"
+    }{{ end }}
+  },
+  {
+    "name": "Test{{.Name}}UpdateSuccess",
+    "description": "Verify updating {{.Name}} by ID",
+    "requestUrl": "/{{.Lower}}s/1",
+    "requestMethod": "PUT",
+    "requestFileName": "{{.Lower}}_update_req.json",
+    "responseFileName": "{{.Lower}}_update_res.json",
+    "expectedStatusCode": 200,
+    "isMockRequired": false{{ if .Authorize }},
+    "headers": {
+      "Authorization": "Bearer dummy-jwt-token"
+    }{{ end }}
+  },
+  {
+    "name": "Test{{.Name}}DeleteSuccess",
+    "description": "Verify deleting {{.Name}} by ID",
+    "requestUrl": "/{{.Lower}}s/1",
+    "requestMethod": "DELETE",
+    "expectedStatusCode": 204,
     "isMockRequired": false{{ if .Authorize }},
     "headers": {
       "Authorization": "Bearer dummy-jwt-token"

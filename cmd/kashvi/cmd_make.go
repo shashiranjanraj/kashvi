@@ -95,11 +95,15 @@ var makeSeederCmd = &cobra.Command{
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
-		content, err := renderStub("seeder", StubData{Name: name, Lower: strings.ToLower(name)})
+		lower := strings.ToLower(name)
+		content, err := renderStub("seeder", StubData{
+			Name: name + "Seeder", Lower: lower,
+			Module: getModulePath(), ResourceName: name,
+		})
 		if err != nil {
 			return err
 		}
-		return writeStub(fmt.Sprintf("database/seeders/%s.go", strings.ToLower(name)), content)
+		return writeStub(fmt.Sprintf("database/seeders/%s_seeder.go", lower), content)
 	},
 }
 
@@ -151,11 +155,20 @@ var makeResourceCmd = &cobra.Command{
 		mdl, _ := renderStub("model", data)
 		repo, _ := renderStub("repository", data)
 		ctrl, _ := renderStub("resource_controller", data)
-		svc, _ := renderStub("service", StubData{Name: name + "Service", Lower: lower + "service"})
+		svc, _ := renderStub("service", StubData{
+			Name: name + "Service", Lower: lower + "service",
+			Module: module, ResourceName: name,
+		})
 
 		migName := fmt.Sprintf("%s_create_%ss_table", ts, lower)
-		mig, _ := renderStub("migration", StubData{Name: migName, StructName: "M_" + migName})
-		sdr, _ := renderStub("seeder", StubData{Name: name + "Seeder"})
+		mig, _ := renderStub("migration", StubData{
+			Name: migName, StructName: "M_" + migName,
+			Lower: lower, ModelName: name, Module: module,
+		})
+		sdr, _ := renderStub("seeder", StubData{
+			Name: name + "Seeder", Lower: lower,
+			Module: module, ResourceName: name,
+		})
 
 		testScen, _ := renderStub("test_scenario", data)
 
@@ -178,6 +191,7 @@ var makeResourceCmd = &cobra.Command{
 
 		fmt.Printf("\n📋  Add to app/routes/api.go (controller uses repository):\n\n")
 		fmt.Printf("    repo := repositories.New%sRepository()\n", name)
+		fmt.Printf("    svc := services.New%sService(repo)\n", name)
 		fmt.Printf("    ctrl := controllers.New%sController(repo)\n", name)
 
 		middle := ""
