@@ -39,7 +39,9 @@ Kashvi follows a layered architecture with a **repository layer** so controllers
 
 Controllers and services depend on **repositories** (e.g. `UserRepository`) instead of `orm.DB()`. Repositories expose methods like `FindByID`, `All`, `Create`, `Update`, `Delete` and keep all data access in one place.
 
-For a detailed diagram of how a request travels through Kashvi (all middleware and handler flow), see **[docs/REQUEST_FLOW.md](docs/REQUEST_FLOW.md)**. For how the design aligns with **SOLID** principles, see **[docs/SOLID_PRINCIPLES.md](docs/SOLID_PRINCIPLES.md)**. To run and interpret **benchmarks**, see **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
+**Where to start:** After [Installation](#installation) and [Configure Environment](#4-configure-environment), read [Logging](#logging-app-and-database) for app/DB log settings, then follow the [Complete CRUD walkthrough](#complete-crud-walkthrough-model--migration--repository--service--controller--validation--auth--seed--test) to use model, migration, repository, service, controller, validation, auth, seeder, and tests together.
+
+For request flow and middleware order, see **[docs/REQUEST_FLOW.md](docs/REQUEST_FLOW.md)**. For SOLID alignment see **[docs/SOLID_PRINCIPLES.md](docs/SOLID_PRINCIPLES.md)**. For benchmarks see **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
 
 ## Installation
 
@@ -68,7 +70,7 @@ Copy the example environment file:
 cp .env.example .env
 ```
 
-Edit `.env` with your database and other settings:
+Edit `.env` with your database and other settings (see **Logging** for `LOG_LEVEL` and `DB_LOG_MODE`):
 
 ```env
 DB_DRIVER=sqlite
@@ -77,7 +79,65 @@ JWT_SECRET=your-secret-key
 APP_PORT=8080
 APP_ENV=local
 REDIS_ADDR=localhost:6379
+LOG_LEVEL=info
+DB_LOG_MODE=silent
 ```
+
+## Logging (app and database)
+
+A common need is to see **what the app is doing** (info logs) and **what SQL is running** (database logs). Kashvi uses structured logging and supports both.
+
+### Environment
+
+In `.env`:
+
+```env
+# App log level: debug | info | warn | error (default: info)
+LOG_LEVEL=debug
+
+# GORM/SQL log level: silent | error | warn | info (default: silent)
+# Use "info" in development to log every query; "silent" in production.
+DB_LOG_MODE=info
+```
+
+- **LOG_LEVEL** — Controls the application logger (startup, requests, errors). Use `debug` in development to see route registration and detailed messages; `info` or `warn` in production.
+- **DB_LOG_MODE** — Controls GORM’s SQL logging. Use `info` while developing to see queries and bindings; set to `silent` or `error` in production to reduce noise.
+
+### In your code
+
+Use the global logger for app-level messages:
+
+```go
+import "github.com/shashiranjanraj/kashvi/pkg/logger"
+
+logger.Info("user_created", "user_id", user.ID, "email", user.Email)
+logger.Debug("cache_miss", "key", cacheKey)
+logger.Warn("rate_limit_approaching", "ip", ip, "count", n)
+logger.Error("payment_failed", "error", err, "order_id", orderID)
+```
+
+Arguments are key-value pairs (alternating); they appear as structured fields in the log output.
+
+### Request-scoped logs (with request_id)
+
+The framework injects a **request_id** per request. Use it so you can trace one request across logs:
+
+```go
+// In a handler that has *http.Request (e.g. after ctx.Wrap, use c.R.Context())
+log := logger.WithCtx(c.R.Context())
+log.Info("order_created", "order_id", order.ID, "user_id", userID)
+```
+
+If the request passed through `reqid.Middleware()` and `middleware.Logger()`, `WithCtx` returns a logger that already includes `request_id`. The same ID is logged for that request in the HTTP access line (method, path, status, duration).
+
+### Summary
+
+| Goal | What to set / use |
+|------|-------------------|
+| See app info and debug messages | `LOG_LEVEL=debug` (or `info`) |
+| See SQL queries in development | `DB_LOG_MODE=info` |
+| Trace one HTTP request in logs | `logger.WithCtx(r.Context())` in handlers |
+| Log from anywhere | `logger.Info/Debug/Warn/Error("msg", "key", value)` |
 
 ## Quick Start
 
@@ -271,28 +331,39 @@ func (c *UserController) Show(ctx *appctx.Context) {
 
 `kashvi make:resource Product` generates a repository and a controller that uses it (no direct orm calls in the controller).
 
-## 5-Minute CRUD Creation Deep Dive
+## Complete CRUD walkthrough (model → migration → repository → service → controller → validation → auth → seed → test)
 
-Let's create a complete CRUD API for a "Product" resource in 5 minutes.
+This section walks through building a full **Product** API using every layer: **model**, **migration**, **repository**, **service**, **controller**, **validation**, **auth** (optional), **seeder**, and **test scenarios**. The controller uses the **repository** (no direct `orm` calls), and validation runs via **BindJSON** and **validate** tags.
 
-### Step 1: Generate the Resource (1 minute)
+---
+
+### Step 1: Generate the resource
+
+From your project root (where `go.mod` lives):
 
 ```bash
 kashvi make:resource Product
 ```
 
 This creates:
-- `app/models/product.go` - Product model
-- `app/repositories/product.go` - Product repository (data layer; controller uses this instead of orm)
-- `app/controllers/product_controller.go` - CRUD controller (uses repository)
-- `app/services/product_service.go` - Business logic service
-- `database/migrations/...` - Migration
-- `database/seeders/product_seeder.go` - Database seeder
-- `testdata/product_scenarios.json` - Test scenarios
 
-### Step 2: Customize the Model (1 minute)
+| File | Purpose |
+|------|--------|
+| `app/models/product.go` | Product model (GORM struct) |
+| `app/repositories/product.go` | Data layer; controller calls this instead of orm |
+| `app/controllers/product_controller.go` | CRUD controller (uses repository) |
+| `app/services/product_service.go` | Business logic (holds repository) |
+| `database/migrations/..._create_products_table.go` | Migration with AutoMigrate & DropTable |
+| `database/seeders/product_seeder.go` | Seeder using `app.RegisterSeeder` |
+| `testdata/product_scenarios.json` | Test scenarios (list, create, get, update, delete) |
 
-Edit `app/models/product.go`:
+The CLI will print the exact route registration snippet to paste into your routes file.
+
+---
+
+### Step 2: Model and validation tags
+
+Edit `app/models/product.go`: add fields and **gorm** / **json** tags. Use **validate** tags so that `ctx.BindJSON(&input)` can validate the body:
 
 ```go
 package models
@@ -301,184 +372,204 @@ import "gorm.io/gorm"
 
 type Product struct {
     gorm.Model
-    Name        string  `json:"name" gorm:"not null"`
+    Name        string  `json:"name"        gorm:"not null"              validate:"required,min=1,max=255"`
     Description string  `json:"description"`
-    Price       float64 `json:"price" gorm:"not null"`
-    SKU         string  `json:"sku" gorm:"unique;not null"`
+    Price       float64 `json:"price"        gorm:"not null"              validate:"required,gte=0"`
+    SKU         string  `json:"sku"         gorm:"uniqueIndex;not null"   validate:"required"`
 }
 ```
 
-### Step 3: Define the Migration (1 minute)
+Validation runs automatically when the controller calls `ctx.BindJSON(&input)` with a struct that has `validate` tags. Supported rules include `required`, `email`, `min`, `max`, `gte`, `lte`, `in`, `url`, etc. (see **Validation** section later).
 
-Edit `database/migrations/20240101000000_create_products_table.go`:
+---
+
+### Step 3: Migration
+
+The generated migration already:
+
+- **Up:** runs `db.AutoMigrate(&models.Product{})` so the table matches your model.
+- **Down:** runs `db.Migrator().DropTable("products")`.
+
+Imports use your module path from `go.mod`. You only need to change the migration if you add custom SQL or indexes.
+
+---
+
+### Step 4: Repository
+
+The generated `app/repositories/product.go` embeds `repository.Base[models.Product]` and exposes:
+
+- `FindByID(id uint)`, `All()`, `Create(m *Product)`, `Update(m *Product)`, `Delete(id uint)`
+- `Query()` for custom chains (e.g. filters, pagination)
+
+No change needed for basic CRUD. Add methods like `FindBySKU(sku string)` in this file if you need them; keep all data access here, not in the controller.
+
+---
+
+### Step 5: Service (optional)
+
+The generated service has a **repository** field. Use it for business logic (e.g. checks, multiple repo calls, events):
 
 ```go
-package migrations
-
-import (
-    "github.com/shashiranjanraj/kashvi/app/models"
-    "gorm.io/gorm"
-)
-
-type CreateProductsTable struct{}
-
-func (m *CreateProductsTable) Up(db *gorm.DB) error {
-    return db.AutoMigrate(&models.Product{})
-}
-
-func (m *CreateProductsTable) Down(db *gorm.DB) error {
-    return db.Migrator().DropTable("products")
-}
-```
-
-### Step 4: Update the Controller (1 minute)
-
-Edit `app/controllers/product_controller.go`:
-
-```go
-func (c *ProductController) Index(ctx *appctx.Context) {
-    var products []models.Product
-    if err := orm.DB().Get(&products); err != nil {
-        ctx.Error(http.StatusInternalServerError, "Failed to fetch products")
-        return
+// app/services/product_service.go
+func (s *ProductService) CreateProduct(input *models.Product) error {
+    if err := s.repo.Create(input); err != nil {
+        return err
     }
-    ctx.Success(products)
+    // e.g. logger.Info("product_created", "id", input.ID)
+    return nil
 }
+```
+
+For simple CRUD, the controller can call the repository directly; the service is optional.
+
+---
+
+### Step 6: Controller and validation
+
+The generated controller already uses the **repository** (no `orm` in the controller). It:
+
+- **Store:** binds JSON to `models.Product` with `ctx.BindJSON(&input)`. Validation runs from the model’s `validate` tags; on failure the framework returns 422.
+- **Update:** loads by ID via repo, binds JSON into the same struct, then `repo.Update(item)`.
+- **Index / Show / Destroy:** call `repo.All()`, `repo.FindByID`, `repo.Delete`.
+
+To add **logging** (e.g. for create):
+
+```go
+import "github.com/shashiranjanraj/kashvi/pkg/logger"
 
 func (c *ProductController) Store(ctx *appctx.Context) {
-    var input struct {
-        Name        string  `json:"name" validate:"required"`
-        Description string  `json:"description"`
-        Price       float64 `json:"price" validate:"required,min=0"`
-        SKU         string  `json:"sku" validate:"required"`
-    }
-    
+    var input models.Product
     if !ctx.BindJSON(&input) {
         return
     }
-    
-    product := &models.Product{
-        Name:        input.Name,
-        Description: input.Description,
-        Price:       input.Price,
-        SKU:         input.SKU,
-    }
-    
-    if err := orm.DB().Create(product).Error; err != nil {
+    if err := c.repo.Create(&input); err != nil {
         ctx.Error(http.StatusBadRequest, "Failed to create product")
         return
     }
-    
-    ctx.Created(product)
-}
-
-func (c *ProductController) Show(ctx *appctx.Context) {
-    id := ctx.Param("id")
-    var product models.Product
-    
-    if err := orm.DB().Where("id = ?", id).First(&product).Error; err != nil {
-        ctx.Error(http.StatusNotFound, "Product not found")
-        return
-    }
-    
-    ctx.Success(product)
-}
-
-func (c *ProductController) Update(ctx *appctx.Context) {
-    id := ctx.Param("id")
-    var product models.Product
-    
-    if err := orm.DB().Where("id = ?", id).First(&product).Error; err != nil {
-        ctx.Error(http.StatusNotFound, "Product not found")
-        return
-    }
-    
-    var input struct {
-        Name        string  `json:"name"`
-        Description string  `json:"description"`
-        Price       float64 `json:"price"`
-        SKU         string  `json:"sku"`
-    }
-    
-    if !ctx.BindJSON(&input) {
-        return
-    }
-    
-    product.Name = input.Name
-    product.Description = input.Description
-    product.Price = input.Price
-    product.SKU = input.SKU
-    
-    if err := orm.DB().Save(&product).Error; err != nil {
-        ctx.Error(http.StatusBadRequest, "Failed to update product")
-        return
-    }
-    
-    ctx.Success(product)
-}
-
-func (c *ProductController) Destroy(ctx *appctx.Context) {
-    id := ctx.Param("id")
-    
-    if err := orm.DB().Where("id = ?", id).Delete(&models.Product{}).Error; err != nil {
-        ctx.Error(http.StatusInternalServerError, "Failed to delete product")
-        return
-    }
-    
-    ctx.Status(http.StatusNoContent)
+    log := logger.WithCtx(ctx.R.Context())
+    log.Info("product_created", "id", input.ID, "sku", input.SKU)
+    ctx.Created(input)
 }
 ```
 
-### Step 5: Register Routes (1 minute)
+---
 
-Add to your routes in `main.go` or `app/routes/api.go` (controller receives the repository):
+### Step 7: Routes and optional auth
+
+Register routes (and optionally the service) in `main.go` or `app/routes/api.go`:
 
 ```go
 repo := repositories.NewProductRepository()
+svc := services.NewProductService(repo)
 ctrl := controllers.NewProductController(repo)
+
 api := r.Group("/api")
 
+// Public
 api.Get("/products", "products.index", ctx.Wrap(ctrl.Index))
-api.Post("/products", "products.store", ctx.Wrap(ctrl.Store))
 api.Get("/products/{id}", "products.show", ctx.Wrap(ctrl.Show))
-api.Put("/products/{id}", "products.update", ctx.Wrap(ctrl.Update))
-api.Delete("/products/{id}", "products.destroy", ctx.Wrap(ctrl.Destroy))
+
+// Protected (JWT required). Import: "github.com/shashiranjanraj/kashvi/pkg/middleware"
+protected := api.Group("", middleware.AuthMiddleware)
+protected.Post("/products", "products.store", ctx.Wrap(ctrl.Store))
+protected.Put("/products/{id}", "products.update", ctx.Wrap(ctrl.Update))
+protected.Delete("/products/{id}", "products.destroy", ctx.Wrap(ctrl.Destroy))
 ```
 
-### Step 6: Run Migrations and Test (1 minute)
+- **Auth:** use `middleware.AuthMiddleware` on the router or group. The middleware validates the `Authorization: Bearer <token>` header and injects `user_id` and `role` into the request context. In handlers, use `middleware.UserIDFromCtx(r)` or `middleware.RoleFromCtx(r)` to read the current user.
+
+---
+
+### Step 8: Seeder
+
+The generated seeder uses `app.RegisterSeeder("products", func() { ... })`. Edit `database/seeders/product_seeder.go` and add sample data:
+
+```go
+func init() {
+    app.RegisterSeeder("products", func() {
+        database.DB.Create(&[]models.Product{
+            {Name: "Laptop", Description: "Gaming", Price: 999.99, SKU: "LAPTOP001"},
+            {Name: "Mouse", Description: "Wireless", Price: 29.99, SKU: "MOUSE001"},
+        })
+    })
+}
+```
+
+Ensure your app’s migrations (and optionally seeders) are registered (e.g. blank import `_ "yourmodule/database/migrations"` and `_ "yourmodule/database/seeders"` in `main.go`).
+
+---
+
+### Step 9: Run migrations, seed, and server
 
 ```bash
 kashvi migrate
+kashvi seed
 kashvi serve
 ```
 
-Test the API:
+Set **LOG_LEVEL** and **DB_LOG_MODE** in `.env` (see **Logging** section) to see app and SQL logs.
+
+---
+
+### Step 10: Test (curl and test scenarios)
+
+**Manual (curl):**
 
 ```bash
-# Create a product
-curl -X POST http://localhost:8080/api/products \
-  -H "Content-Type: application/json" \
-  -d '{"name":"Laptop","description":"Gaming laptop","price":999.99,"sku":"LAPTOP001"}'
-
-# Get all products
+# List
 curl http://localhost:8080/api/products
 
-# Get specific product
+# Create (if not using auth)
+curl -X POST http://localhost:8080/api/products \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Laptop","description":"Gaming","price":999.99,"sku":"LAPTOP001"}'
+
+# Get one
 curl http://localhost:8080/api/products/1
 
-# Update product
+# Update
 curl -X PUT http://localhost:8080/api/products/1 \
   -H "Content-Type: application/json" \
-  -d '{"name":"Gaming Laptop","price":1099.99}'
+  -d '{"name":"Gaming Laptop","description":"Gaming","price":1099.99,"sku":"LAPTOP001"}'
 
-# Delete product
+# Delete
 curl -X DELETE http://localhost:8080/api/products/1
 ```
+
+**Automated (testkit):** the generated `testdata/product_scenarios.json` defines scenarios (list, create, get, update, delete). Build your app’s `http.Handler` (e.g. from `app` + routes) and run:
+
+```go
+func TestProductAPI(t *testing.T) {
+    handler := app.BuildHandler(/* your app with routes */)
+    testkit.RunDir(t, handler, "testdata")
+}
+```
+
+Put request/response JSON fixtures in `testdata/` as referenced by the scenario files (e.g. `product_create_req.json`, `product_create_res.json`).
+
+---
+
+### Flow summary
+
+| Layer | Role |
+|-------|------|
+| **Model** | Struct + gorm/json/validate tags |
+| **Migration** | AutoMigrate / DropTable for the model |
+| **Repository** | All DB access (FindByID, All, Create, Update, Delete, Query) |
+| **Service** | Optional business logic using repository |
+| **Controller** | HTTP only: BindJSON (validation), call repo/service, logger.WithCtx, respond |
+| **Validation** | Via `validate` tags and `ctx.BindJSON` (422 on failure) |
+| **Auth** | `middleware.AuthMiddleware` on routes; JWT in `Authorization` header |
+| **Seeder** | `app.RegisterSeeder("key", func() { ... })` |
+| **Test** | testkit + JSON scenarios in `testdata/` |
+
+**See also:** [Request flow & middleware](docs/REQUEST_FLOW.md) · [Validation](#validation) · [Authentication](#authentication) · [Database](#database) (migrations, seeders) · [Benchmarks](docs/BENCHMARK.md)
 
 ## CLI Commands
 
 ### Project Management
 
+- `kashvi version` - Print the Kashvi framework version (e.g. `Kashvi Framework v1.0.16`)
 - `kashvi new <name>` - Create a new Kashvi project
 - `kashvi serve` - Start the development server
 - `kashvi build` - Build the application binary
@@ -883,13 +974,22 @@ func CreateUser(c *ctx.Context) {
 
 ### Validation
 
+Validation runs when you call `ctx.BindJSON(&input)` in a controller. Use **validate** struct tags on the model or on a dedicated input struct. On failure the framework returns **422** with validation errors.
+
 ```go
 type CreateUserInput struct {
     Name     string `json:"name" validate:"required,min=2,max=100"`
     Email    string `json:"email" validate:"required,email"`
     Password string `json:"password" validate:"required,min=8"`
 }
+
+// In handler:
+if !ctx.BindJSON(&input) {
+    return  // 422 and error details already sent
+}
 ```
+
+Common rules: `required`, `email`, `min`, `max`, `gte`, `lte`, `oneof`, `url`, `uuid`. Used in the **Complete CRUD walkthrough** on the model (e.g. `validate:"required,gte=0"` on price).
 
 ### Logging
 
