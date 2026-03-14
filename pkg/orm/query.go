@@ -1,6 +1,7 @@
 package orm
 
 import (
+	"errors"
 	"sync"
 	"time"
 
@@ -28,6 +29,9 @@ type Pagination struct {
 
 // DB returns a fresh Query backed by the global database connection.
 func DB() *Query {
+	if database.DB == nil {
+		return &Query{Error: errors.New("database connection not initialized")}
+	}
 	return &Query{db: database.DB}
 }
 
@@ -41,24 +45,36 @@ func (q *Query) String() string {
 
 // Model sets the model for the query (table resolution).
 func (q *Query) Model(v interface{}) *Query {
+	if q.db == nil || q.Error != nil {
+		return q
+	}
 	db := q.db.Model(v)
 	return &Query{db: db, Error: db.Error}
 }
 
 // Where appends a WHERE clause.
 func (q *Query) Where(query string, args ...interface{}) *Query {
+	if q.db == nil || q.Error != nil {
+		return q
+	}
 	db := q.db.Where(query, args...)
 	return &Query{db: db, Error: db.Error}
 }
 
 // OrderBy appends an ORDER BY clause. dir should be "asc" or "desc".
 func (q *Query) OrderBy(col, dir string) *Query {
+	if q.db == nil || q.Error != nil {
+		return q
+	}
 	db := q.db.Order(col + " " + dir)
 	return &Query{db: db, Error: db.Error}
 }
 
 // Select limits the fetched columns.
 func (q *Query) Select(fields ...string) *Query {
+	if q.db == nil || q.Error != nil {
+		return q
+	}
 	args := make([]interface{}, len(fields)-1)
 	for i, f := range fields[1:] {
 		args[i] = f
@@ -69,18 +85,27 @@ func (q *Query) Select(fields ...string) *Query {
 
 // Joins adds a JOIN clause.
 func (q *Query) Joins(query string, args ...interface{}) *Query {
+	if q.db == nil || q.Error != nil {
+		return q
+	}
 	db := q.db.Joins(query, args...)
 	return &Query{db: db, Error: db.Error}
 }
 
 // With eager-loads the named association (GORM Preload).
 func (q *Query) With(assoc string) *Query {
+	if q.db == nil || q.Error != nil {
+		return q
+	}
 	db := q.db.Preload(assoc)
 	return &Query{db: db, Error: db.Error}
 }
 
 // Paginate applies OFFSET/LIMIT for page-based pagination.
 func (q *Query) Paginate(page, limit int) *Query {
+	if q.db == nil || q.Error != nil {
+		return q
+	}
 	page, limit = normalizePagination(page, limit)
 	offset := (page - 1) * limit
 	db := q.db.Offset(offset).Limit(limit)
@@ -91,16 +116,34 @@ func (q *Query) Paginate(page, limit int) *Query {
 
 // Get fetches all matching rows into dest.
 func (q *Query) Get(dest interface{}) error {
+	if q.Error != nil {
+		return q.Error
+	}
+	if q.db == nil {
+		return errors.New("database connection not initialized")
+	}
 	return q.db.Find(dest).Error
 }
 
 // First fetches the first matching row into dest.
 func (q *Query) First(dest interface{}) error {
+	if q.Error != nil {
+		return q.Error
+	}
+	if q.db == nil {
+		return errors.New("database connection not initialized")
+	}
 	return q.db.First(dest).Error
 }
 
 // GetWithPagination fetches rows with pagination metadata.
 func (q *Query) GetWithPagination(dest interface{}, page, limit int) (Pagination, error) {
+	if q.Error != nil {
+		return Pagination{}, q.Error
+	}
+	if q.db == nil {
+		return Pagination{}, errors.New("database connection not initialized")
+	}
 	page, limit = normalizePagination(page, limit)
 
 	var total int64
@@ -126,6 +169,12 @@ func (q *Query) GetWithPagination(dest interface{}, page, limit int) (Pagination
 
 // Cache tries the cache first; on miss it executes the query and stores the result.
 func (q *Query) Cache(key string, ttl time.Duration, dest interface{}) error {
+	if q.Error != nil {
+		return q.Error
+	}
+	if q.db == nil {
+		return errors.New("database connection not initialized")
+	}
 	// Import-cycle-safe: import cache inline only through the registered interface.
 	// Direct cache use is done via the CacheStore variable below (set at boot).
 	if CacheStore != nil && CacheStore.Get(key, dest) {
@@ -148,26 +197,41 @@ func (q *Query) Cache(key string, ttl time.Duration, dest interface{}) error {
 
 // Create inserts value into the database.
 func (q *Query) Create(value interface{}) error {
+	if q.db == nil || q.Error != nil {
+		return q.Error
+	}
 	return q.db.Create(value).Error
 }
 
 // Save upserts value (creates if no primary key, updates otherwise).
 func (q *Query) Save(value interface{}) error {
+	if q.db == nil || q.Error != nil {
+		return q.Error
+	}
 	return q.db.Save(value).Error
 }
 
 // Update sets a single column to value on the current query scope.
 func (q *Query) Update(col string, value interface{}) error {
+	if q.db == nil || q.Error != nil {
+		return q.Error
+	}
 	return q.db.Update(col, value).Error
 }
 
 // Updates sets multiple columns from a map or struct.
 func (q *Query) Updates(values interface{}) error {
+	if q.db == nil || q.Error != nil {
+		return q.Error
+	}
 	return q.db.Updates(values).Error
 }
 
 // Delete soft-deletes (or hard-deletes if no DeletedAt field) matching rows.
 func (q *Query) Delete(value interface{}, conds ...interface{}) error {
+	if q.db == nil || q.Error != nil {
+		return q.Error
+	}
 	return q.db.Delete(value, conds...).Error
 }
 
