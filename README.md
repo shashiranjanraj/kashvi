@@ -8,7 +8,7 @@ Kashvi is a Laravel-inspired Go web framework designed for rapid application dev
 
 ### Key Features
 
-- **MVC Architecture**: Model-View-Controller pattern with clear separation of concerns
+- **MVC Architecture**: Controllers (HTTP), services (business logic), repositories (data), models, and DTOs (request/response shapes)
 - **Database ORM**: GORM-powered query builder with support for MySQL, PostgreSQL, SQLite, and SQL Server
 - **Migrations**: Database schema versioning and management
 - **Authentication**: JWT-based auth with middleware
@@ -21,11 +21,13 @@ Kashvi is a Laravel-inspired Go web framework designed for rapid application dev
 
 ### Architecture
 
-Kashvi follows a layered architecture with a **repository layer** so controllers and services do not call the ORM directly:
+Kashvi follows **MVC** with a repository layer and DTOs. Controllers handle HTTP; they bind DTOs, call services/repositories, and respond:
 
 ```
 ┌─────────────────┐
-│   Controllers   │ ← Handle HTTP, call services or repositories
+│  Controllers    │ ← HTTP; bind DTOs, call services/repositories, respond
+├─────────────────┤
+│      DTOs       │ ← Request/response structs (CreateXRequest, UpdateXRequest, XResponse)
 ├─────────────────┤
 │    Services     │ ← Business logic (optional)
 ├─────────────────┤
@@ -37,9 +39,9 @@ Kashvi follows a layered architecture with a **repository layer** so controllers
 └─────────────────┘
 ```
 
-Controllers and services depend on **repositories** (e.g. `UserRepository`) instead of `orm.DB()`. Repositories expose methods like `FindByID`, `All`, `Create`, `Update`, `Delete` and keep all data access in one place.
+Controllers bind incoming JSON to **DTOs** (e.g. `CreateProductRequest`), validate them, then map to **models** and use **repositories** (e.g. `ProductRepository`) instead of calling `orm.DB()` directly.
 
-**Where to start:** After [Installation](#installation) and [Configure Environment](#4-configure-environment), read [Logging](#logging-app-and-database) for app/DB log settings, then follow the [Complete CRUD walkthrough](#complete-crud-walkthrough-model--migration--repository--service--controller--validation--auth--seed--test) to use model, migration, repository, service, controller, validation, auth, seeder, and tests together.
+**Where to start:** After [Installation](#installation) and [Configure Environment](#4-configure-environment), read [Logging](#logging-app-and-database) for app/DB log settings, then follow the [Complete CRUD walkthrough](#complete-crud-walkthrough-model--migration--repository--service--controller--validation--auth--seed--test) to use model, DTOs, migration, repository, controller, validation, auth, seeder, and tests together.
 
 For request flow and middleware order, see **[docs/REQUEST_FLOW.md](docs/REQUEST_FLOW.md)**. For SOLID alignment see **[docs/SOLID_PRINCIPLES.md](docs/SOLID_PRINCIPLES.md)**. For benchmarks see **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
 
@@ -208,11 +210,11 @@ Kashvi uses Chi router with named routes:
 
 ```go
 func(r *router.Router) {
-    r.Get("/users", "users.index", userController.Index)
-    r.Post("/users", "users.store", userController.Store)
-    r.Get("/users/{id}", "users.show", userController.Show)
-    r.Put("/users/{id}", "users.update", userController.Update)
-    r.Delete("/users/{id}", "users.destroy", userController.Destroy)
+    r.Get("/users", "users.index", ctx.Wrap(userController.Index))
+    r.Post("/users", "users.store", ctx.Wrap(userController.Store))
+    r.Get("/users/{id}", "users.show", ctx.Wrap(userController.Show))
+    r.Put("/users/{id}", "users.update", ctx.Wrap(userController.Update))
+    r.Delete("/users/{id}", "users.destroy", ctx.Wrap(userController.Destroy))
 }
 ```
 
@@ -307,6 +309,16 @@ func (r *UserRepository) FindByEmail(email string) (*models.User, error) {
 
 **Base methods:** `FindByID(id uint)`, `All()`, `Create(m *T)`, `Update(m *T)`, `Delete(id uint)`, `Exists(id uint)`, `Count()`, `Paginate(page, limit int)`, and `Query()` for custom chains. Use `Query()` for filters, joins, and scoped queries while keeping all DB access inside the repository.
 
+### DTOs (request / response)
+
+**DTOs** (Data Transfer Objects) define the API request and response shapes separately from your domain models. Controllers bind JSON to DTOs (e.g. `CreateProductRequest`, `UpdateProductRequest`) and validate them before mapping to models and calling the repository. This keeps validation and API contracts in one place.
+
+- **CreateXRequest** — request body for `POST /resources`; use `validate` tags.
+- **UpdateXRequest** — request body for `PUT /resources/{id}`; use pointers for optional fields.
+- **XResponse** — optional response shape (e.g. to hide or format fields).
+
+Generate DTOs with `kashvi make:dto Product` or as part of `kashvi make:resource Product`. Edit `app/dto/*_dto.go` to match your API.
+
 In your controller, inject the repository and use it:
 
 ```go
@@ -329,11 +341,11 @@ func (c *UserController) Show(ctx *appctx.Context) {
 }
 ```
 
-`kashvi make:resource Product` generates a repository and a controller that uses it (no direct orm calls in the controller).
+`kashvi make:resource Product` generates a repository, **DTOs** (request/response), and a **controller** that uses them (no direct orm calls in the controller).
 
-## Complete CRUD walkthrough (model → migration → repository → service → controller → validation → auth → seed → test)
+## Complete CRUD walkthrough (model → DTO → migration → repository → controller → validation → auth → seed → test)
 
-This section walks through building a full **Product** API using every layer: **model**, **migration**, **repository**, **service**, **controller**, **validation**, **auth** (optional), **seeder**, and **test scenarios**. The controller uses the **repository** (no direct `orm` calls), and validation runs via **BindJSON** and **validate** tags.
+This section walks through building a full **Product** API using every layer: **model**, **DTOs**, **migration**, **repository**, **controller**, **validation**, **auth** (optional), **seeder**, and **test scenarios**. The controller binds JSON to **DTOs**, validates, maps to the model, and uses the **repository** (no direct `orm` calls).
 
 ---
 
@@ -350,8 +362,9 @@ This creates:
 | File | Purpose |
 |------|--------|
 | `app/models/product.go` | Product model (GORM struct) |
+| `app/dto/product_dto.go` | Request/response DTOs (CreateProductRequest, UpdateProductRequest, ProductResponse) |
 | `app/repositories/product.go` | Data layer; controller calls this instead of orm |
-| `app/controllers/product_controller.go` | CRUD controller (uses repository) |
+| `app/controllers/product_controller.go` | CRUD controller (uses repository + DTOs) |
 | `app/services/product_service.go` | Business logic (holds repository) |
 | `database/migrations/..._create_products_table.go` | Migration with AutoMigrate & DropTable |
 | `database/seeders/product_seeder.go` | Seeder using `app.RegisterSeeder` |
@@ -424,12 +437,24 @@ For simple CRUD, the controller can call the repository directly; the service is
 
 ---
 
-### Step 6: Controller and validation
+### Step 6: DTOs (request/response)
 
-The generated controller already uses the **repository** (no `orm` in the controller). It:
+The generated `app/dto/product_dto.go` defines:
 
-- **Store:** binds JSON to `models.Product` with `ctx.BindJSON(&input)`. Validation runs from the model’s `validate` tags; on failure the framework returns 422.
-- **Update:** loads by ID via repo, binds JSON into the same struct, then `repo.Update(item)`.
+- **CreateProductRequest** — JSON body for `POST /products`; use `validate` tags for validation.
+- **UpdateProductRequest** — JSON body for `PUT /products/{id}`; use pointers for optional fields.
+- **ProductResponse** — Optional response shape (e.g. to hide or format fields); Index/Show can return the model as-is or map to this.
+
+Controllers bind to these DTOs with `ctx.BindJSON(&input)` so validation runs before touching the model or repository.
+
+---
+
+### Step 7: Controller and validation
+
+The generated controller uses the **repository** and **DTOs** (no `orm` in the controller). It:
+
+- **Store:** binds JSON to `dto.CreateProductRequest`, validates, maps to `models.Product`, then `repo.Create(model)`.
+- **Update:** loads by ID via repo, binds to `dto.UpdateProductRequest`, applies non-nil fields to the model, then `repo.Update(item)`.
 - **Index / Show / Destroy:** call `repo.All()`, `repo.FindByID`, `repo.Delete`.
 
 To add **logging** (e.g. for create):
@@ -438,23 +463,24 @@ To add **logging** (e.g. for create):
 import "github.com/shashiranjanraj/kashvi/pkg/logger"
 
 func (c *ProductController) Store(ctx *appctx.Context) {
-    var input models.Product
+    var input dto.CreateProductRequest
     if !ctx.BindJSON(&input) {
         return
     }
-    if err := c.repo.Create(&input); err != nil {
+    model := &models.Product{Name: input.Name, Description: input.Description, Price: input.Price, SKU: input.SKU}
+    if err := c.repo.Create(model); err != nil {
         ctx.Error(http.StatusBadRequest, "Failed to create product")
         return
     }
     log := logger.WithCtx(ctx.R.Context())
-    log.Info("product_created", "id", input.ID, "sku", input.SKU)
-    ctx.Created(input)
+    log.Info("product_created", "id", model.ID, "sku", model.SKU)
+    ctx.Created(model)
 }
 ```
 
 ---
 
-### Step 7: Routes and optional auth
+### Step 8: Routes and optional auth
 
 Register routes (and optionally the service) in `main.go` or `app/routes/api.go`:
 
@@ -480,7 +506,7 @@ protected.Delete("/products/{id}", "products.destroy", ctx.Wrap(ctrl.Destroy))
 
 ---
 
-### Step 8: Seeder
+### Step 9: Seeder
 
 The generated seeder uses `app.RegisterSeeder("products", func() { ... })`. Edit `database/seeders/product_seeder.go` and add sample data:
 
@@ -499,7 +525,7 @@ Ensure your app’s migrations (and optionally seeders) are registered (e.g. bla
 
 ---
 
-### Step 9: Run migrations, seed, and server
+### Step 10: Run migrations, seed, and serve
 
 ```bash
 kashvi migrate
@@ -511,7 +537,7 @@ Set **LOG_LEVEL** and **DB_LOG_MODE** in `.env` (see **Logging** section) to see
 
 ---
 
-### Step 10: Test (curl and test scenarios)
+### Step 11: Test (curl and test scenarios)
 
 **Manual (curl):**
 
@@ -557,7 +583,8 @@ Put request/response JSON fixtures in `testdata/` as referenced by the scenario 
 | **Migration** | AutoMigrate / DropTable for the model |
 | **Repository** | All DB access (FindByID, All, Create, Update, Delete, Query) |
 | **Service** | Optional business logic using repository |
-| **Controller** | HTTP only: BindJSON (validation), call repo/service, logger.WithCtx, respond |
+| **Controller** | HTTP only: bind DTOs, validate, call repo/service, logger.WithCtx, respond |
+| **DTO** | Request/response structs (CreateXRequest, UpdateXRequest, XResponse); validate tags |
 | **Validation** | Via `validate` tags and `ctx.BindJSON` (422 on failure) |
 | **Auth** | `middleware.AuthMiddleware` on routes; JWT in `Authorization` header |
 | **Seeder** | `app.RegisterSeeder("key", func() { ... })` |
@@ -584,12 +611,13 @@ Put request/response JSON fixtures in `testdata/` as referenced by the scenario 
 ### Code Generation
 
 - `kashvi make:model <Name>` - Create a model
-- `kashvi make:controller <Name>` - Create a controller
+- `kashvi make:dto <Name>` - Create request/response DTOs for a resource
+- `kashvi make:controller <Name>` - Create a controller (MVC)
 - `kashvi make:repository <Name>` - Create a repository (data layer for a model)
 - `kashvi make:service <Name>` - Create a service
 - `kashvi make:migration <name>` - Create a migration
 - `kashvi make:seeder <Name>` - Create a seeder
-- `kashvi make:resource <Name>` - Create complete CRUD resource (model + repository + controller + service + migration + seeder)
+- `kashvi make:resource <Name>` - Create complete CRUD resource (model + dto + repository + controller + service + migration + seeder)
 
 ### Background Tasks
 
@@ -941,6 +969,7 @@ myproject/
 │   └── app.json
 ├── app/
 │   ├── controllers/
+│   ├── dto/
 │   ├── models/
 │   ├── repositories/
 │   ├── services/
@@ -974,7 +1003,7 @@ func CreateUser(c *ctx.Context) {
 
 ### Validation
 
-Validation runs when you call `ctx.BindJSON(&input)` in a controller. Use **validate** struct tags on the model or on a dedicated input struct. On failure the framework returns **422** with validation errors.
+Validation runs when you call `ctx.BindJSON(&input)` in a controller (typically binding to a DTO). Use **validate** struct tags on the model or on a dedicated input struct. On failure the framework returns **422** with validation errors.
 
 ```go
 type CreateUserInput struct {

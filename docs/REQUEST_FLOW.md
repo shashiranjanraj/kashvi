@@ -154,7 +154,7 @@ Client
 ⑧ Auth           validate Bearer JWT → context += user_id, role (if protected group)
   ▼
 ⑨ Handler        ctx.Wrap(ProductController.Index)
-                   → Controller.Index(c)
+                   → ProductController.Index(c)
                    → c.repo.All()
                    → ctx.Success(products)
   ▼
@@ -169,7 +169,7 @@ Client receives response
 
 ## 7. Handler → DB request flow
 
-Once the request reaches your handler, any database access follows this path. The handler never talks to the DB directly; it goes through **Controller → (Service) → Repository → ORM → Database**.
+Once the request reaches your handler, any database access follows this path. The controller never talks to the DB directly; it goes through **Controller → (Service) → Repository → ORM → Database**.
 
 ### 7.1 Flow diagram
 
@@ -240,7 +240,7 @@ Once the request reaches your handler, any database access follows this path. Th
 
 ### 7.3 Important points
 
-- **Handler never sees `orm` or `database`** — only the controller (and optional service) call the repository.
+- **Controller never sees `orm` or `database`** — only the controller (and optional service) call the repository; controllers bind to DTOs, then map to models and call the repository.
 - **Repository is the only layer that calls `orm.DB()`** — all DB access is behind the repository API (FindByID, All, Create, Update, Delete, Query()).
 - **ORM is a thin wrapper** — `orm.Query` holds `*gorm.DB` and delegates to GORM’s `First`, `Find`, `Create`, `Save`, `Delete`, etc.
 - **Single connection** — `database.DB` is one `*gorm.DB` (with connection pool), set once at startup in `database.Connect()` and used by all requests.
@@ -249,12 +249,12 @@ Once the request reaches your handler, any database access follows this path. Th
 
 ## 8. Validation and data extraction
 
-**Validation** and **data extraction** from the request both happen in the **controller (handler)** layer, before any call to the repository or service. They are implemented by **pkg/ctx**, **pkg/bind**, and **pkg/validate**.
+**Validation** and **data extraction** from the request both happen in the **controller** layer (often with **DTOs** for request body shape), before any call to the repository or service. They are implemented by **pkg/ctx**, **pkg/bind**, and **pkg/validate**.
 
 ### 8.1 Where they sit in the flow
 
 ```
-  Request reaches handler (Controller)
+  Request reaches handler
        │
        ├── DATA EXTRACTION (read from request)
        │   • pkg/ctx: Param("id"), Query("page"), PostForm("name"), Header("Authorization"), Cookie("session"), Body()
@@ -268,7 +268,7 @@ Once the request reaches your handler, any database access follows this path. Th
            If invalid → controller sends 400/422 (via c.Error / c.ValidationError) and returns
 ```
 
-So: **extraction** and **validation** are the first thing the controller does with the request; they do **not** run in middleware or in the repository layer.
+So: **extraction** and **validation** are the first thing the controller does with the request (e.g. bind to a DTO); they do **not** run in middleware or in the repository layer.
 
 ### 8.2 Data extraction (where data comes from)
 
@@ -282,7 +282,7 @@ So: **extraction** and **validation** are the first thing the controller does wi
 | Cookies       | `c.Cookie("session")`    | **pkg/ctx** → `c.R.Cookie(name)` |
 | Raw body      | `c.Body()`               | **pkg/ctx** → `io.ReadAll(c.R.Body)` |
 
-All of this is **controller-side**: the handler uses `*ctx.Context` to read from the request. There is no separate “data extraction layer”; the controller is the place that pulls data out and then validates or passes it on.
+All of this is **controller-side**: the controller uses `*ctx.Context` to read from the request. There is no separate “data extraction layer”; the controller is the place that pulls data out and then validates or passes it on.
 
 ### 8.3 Validation (where rules run)
 
@@ -294,18 +294,18 @@ All of this is **controller-side**: the handler uses `*ctx.Context` to read from
 
 Flow for a typical POST/PUT:
 
-1. Controller calls `c.BindJSON(&input)`.
+1. Handler calls `c.BindJSON(&input)` (e.g. into a DTO like CreateProductRequest).
 2. **pkg/bind**: `bind.JSON(c.R, dest)` → limit body size → `json.Decode(r.Body, dest)` (extraction), then `validate.Struct(dest)` (validation).
 3. If decode fails → bind returns error → **ctx** sends 400 and returns false.
 4. If validation fails → **ctx** sends 422 with `c.ValidationError(errs)` and returns false.
-5. If OK → controller continues (e.g. calls repo.Create(&input)).
+5. If OK → handler continues (e.g. maps DTO to model and calls repo.Create(&model)).
 
 So **validation** always runs in the **controller’s call stack** (via **bind** + **validate**, or **ctx.Validate**). It does **not** run in middleware or in the repository.
 
 ### 8.4 Summary
 
-- **Data extraction:** In the **controller**, using **pkg/ctx** (params, query, form, headers, cookies, body) and **pkg/bind** (JSON body decode).
-- **Validation:** In the **controller**, using **pkg/validate** (struct-tag rules), triggered by **c.BindJSON** / **bind.JSON** or **c.Validate**.
+- **Data extraction:** In the **controller**, using **pkg/ctx** (params, query, form, headers, cookies, body) and **pkg/bind** (JSON body decode, often into a DTO).
+- **Validation:** In the **controller**, using **pkg/validate** (struct-tag rules on DTOs or models), triggered by **c.BindJSON** / **bind.JSON** or **c.Validate**.
 - Both happen **before** any repository or service call; invalid input results in 400/422 from the controller and no DB access.
 
 ---
@@ -315,5 +315,5 @@ So **validation** always runs in the **controller’s call stack** (via **bind**
 - **Request path:** `Metrics → Recovery → ReqID → Logger → Session → CORS → RateLimit → [Group MW e.g. Auth] → Handler`.
 - **Response path:** Same middleware in **reverse** after the handler returns.
 - **Handler:** Either context-based (`ctx.Wrap`), error-return (`router.Wrap`), or raw `http.HandlerFunc`.
-- **Validation and data extraction:** In the **controller** only: **pkg/ctx** (Param, Query, PostForm, Header, Cookie, Body), **pkg/bind** (JSON decode + size limit), **pkg/validate** (struct-tag rules). Triggered by `c.BindJSON(&input)` or `c.Validate(v)`; invalid input → 400/422 before any repo call.
-- **Application layers:** Controller → (Service) → Repository → ORM/DB; only the handler (and optionally service) call the repository; the repository is the only place that talks to the ORM.
+- **Validation and data extraction:** In the **controller** only: **pkg/ctx** (Param, Query, PostForm, Header, Cookie, Body), **pkg/bind** (JSON decode + size limit), **pkg/validate** (struct-tag rules on DTOs). Triggered by `c.BindJSON(&input)` or `c.Validate(v)`; invalid input → 400/422 before any repo call.
+- **Application layers:** Controller → (Service) → Repository → ORM/DB; controllers bind to DTOs, then use repository; the repository is the only place that talks to the ORM.

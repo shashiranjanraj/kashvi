@@ -26,7 +26,9 @@ var newCmd = &cobra.Command{
 		// Create directories
 		dirs := []string{
 			"app/controllers",
+			"app/dto",
 			"app/models",
+			"app/repositories",
 			"app/routes",
 			"app/services",
 			"config",

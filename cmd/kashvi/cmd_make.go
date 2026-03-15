@@ -46,7 +46,7 @@ var makeModelCmd = &cobra.Command{
 
 var makeControllerCmd = &cobra.Command{
 	Use:   "make:controller [Name]",
-	Short: "Scaffold a new controller",
+	Short: "Scaffold a new controller (MVC)",
 	Args:  cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -127,12 +127,28 @@ var makeRepositoryCmd = &cobra.Command{
 	},
 }
 
+var makeDtoCmd = &cobra.Command{
+	Use:   "make:dto [Name]",
+	Short: "Scaffold request/response DTOs for a resource",
+	Args:  cobra.ExactArgs(1),
+	RunE: func(cmd *cobra.Command, args []string) error {
+		name := args[0]
+		lower := strings.ToLower(name)
+		data := StubData{Name: name, Lower: lower}
+		content, err := renderStub("dto", data)
+		if err != nil {
+			return err
+		}
+		return writeStub(fmt.Sprintf("app/dto/%s_dto.go", lower), content)
+	},
+}
+
 // kashvi make:resource — one command to scaffold a complete CRUD resource.
-// Users requested `kashvi make:crud` alias with flags. We update this resource command to match.
+// Generates model, DTOs, repository, controller (MVC), service, migration, seeder, test scenarios.
 var makeResourceCmd = &cobra.Command{
 	Use:     "make:resource [Name]",
 	Aliases: []string{"make:crud"},
-	Short:   "Scaffold a full CRUD resource (model + repository + controller + service + migration + seeder)",
+	Short:   "Scaffold a full CRUD resource (model + dto + repository + controller + service + migration + seeder)",
 	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		name := args[0]
@@ -151,8 +167,8 @@ var makeResourceCmd = &cobra.Command{
 			Module:    module,
 		}
 
-		// Repository layer + resource_controller (controller uses repo, not orm directly)
 		mdl, _ := renderStub("model", data)
+		dtoContent, _ := renderStub("dto", data)
 		repo, _ := renderStub("repository", data)
 		ctrl, _ := renderStub("resource_controller", data)
 		svc, _ := renderStub("service", StubData{
@@ -175,6 +191,7 @@ var makeResourceCmd = &cobra.Command{
 		type spec struct{ path, content string }
 		files := []spec{
 			{fmt.Sprintf("app/models/%s.go", lower), mdl},
+			{fmt.Sprintf("app/dto/%s_dto.go", lower), dtoContent},
 			{fmt.Sprintf("app/repositories/%s.go", lower), repo},
 			{fmt.Sprintf("app/controllers/%s_controller.go", lower), ctrl},
 			{fmt.Sprintf("app/services/%s_service.go", lower), svc},
@@ -189,14 +206,14 @@ var makeResourceCmd = &cobra.Command{
 			}
 		}
 
-		fmt.Printf("\n📋  Add to app/routes/api.go (controller uses repository):\n\n")
+		fmt.Printf("\n📋  Add to app/routes/api.go (controller uses repository + DTOs):\n\n")
 		fmt.Printf("    repo := repositories.New%sRepository()\n", name)
 		fmt.Printf("    svc := services.New%sService(repo)\n", name)
 		fmt.Printf("    ctrl := controllers.New%sController(repo)\n", name)
 
 		middle := ""
 		if authorize {
-			middle = ", middlewares.Auth()"
+			middle = ", middleware.AuthMiddleware"
 		}
 
 		fmt.Printf("    api.Get(\"/%ss\",         \"%s.index\",   ctx.Wrap(ctrl.Index)%s)\n", lower, lower, middle)

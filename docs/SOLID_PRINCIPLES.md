@@ -8,7 +8,7 @@ This document assesses how Kashvi’s request flow and architecture align with t
 
 | Principle | Alignment | Notes |
 |-----------|-----------|--------|
-| **S** Single Responsibility | ✅ Good | Controllers, repositories, middleware, and services have clear, single roles. |
+| **S** Single Responsibility | ✅ Good | Controllers, DTOs, repositories, middleware, and services have clear, single roles. |
 | **O** Open/Closed | ✅ Good | New behaviour via new middleware, routes, migrations, queue drivers—without changing core code. |
 | **L** Liskov Substitution | ⚠️ Partial | Strong where interfaces exist (queue, cache, migrations); weak where controllers use concrete repositories. |
 | **I** Interface Segregation | ✅ Good | Small, focused interfaces (Driver, Job, Migration, Cacher, Logger). |
@@ -24,7 +24,7 @@ Overall: the **framework core** follows SOLID well; the **application layer** (e
 
 **Where Kashvi does it well:**
 
-- **Controllers** — Handle HTTP only: parse input, call repo/service, write response. No DB or business rules.
+- **Controllers** — Handle HTTP only: bind DTOs, validate, call repo/service, write response. No DB or business rules.
 - **Repositories** — Own data access only (queries, persistence). No HTTP or business logic.
 - **Services** — Optional place for business logic only; no HTTP or DB details.
 - **Middleware** — Each does one thing: metrics, recovery, request ID, logging, session, CORS, rate limit, auth.
@@ -126,8 +126,8 @@ So the framework avoids “god” interfaces and keeps contracts minimal and foc
 1. **Repository interfaces (DIP + LSP)**  
    Define per-resource interfaces (e.g. `ProductRepository`) and have controllers and services depend on those interfaces. Inject the concrete `*repositories.ProductRepository` in `main` or route setup. Tests can inject mocks.
 
-2. **Keep controllers thin (SRP)**  
-   Continue to avoid business logic and DB access in controllers; use services for non-trivial logic and repositories for all data access.
+2. **Keep controllers thin (SRP)**
+   Continue to avoid business logic and DB access in controllers; use DTOs for request/response shape, services for non-trivial logic, and repositories for all data access.
 
 3. **Optional: service interfaces**  
    If you want to swap or mock services in tests, define small interfaces (e.g. `ProductService`) and inject them into controllers.

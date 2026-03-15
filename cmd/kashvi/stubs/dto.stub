@@ -1,0 +1,31 @@
+package dto
+
+// Create{{.Name}}Request is the request body for creating a {{.Name}}.
+// Add or change fields and validate tags as needed.
+type Create{{.Name}}Request struct {
+	Name        string  `json:"name" validate:"required,max=255"`
+	Description string  `json:"description"`
+	Price       float64 `json:"price" validate:"required,gte=0"`
+	SKU         string  `json:"sku" validate:"required"`
+}
+
+// Update{{.Name}}Request is the request body for updating a {{.Name}}.
+// Use pointers for optional fields so you can distinguish "not sent" from "zero value".
+type Update{{.Name}}Request struct {
+	Name        *string  `json:"name,omitempty" validate:"omitempty,max=255"`
+	Description *string  `json:"description,omitempty"`
+	Price       *float64 `json:"price,omitempty" validate:"omitempty,gte=0"`
+	SKU         *string  `json:"sku,omitempty"`
+}
+
+// {{.Name}}Response is the API response shape for a {{.Name}}.
+// Use when you want to hide or format fields differently from the model.
+type {{.Name}}Response struct {
+	ID          uint   `json:"id"`
+	Name        string `json:"name"`
+	Description string `json:"description"`
+	Price       float64 `json:"price"`
+	SKU         string `json:"sku"`
+	CreatedAt   string `json:"created_at"`
+	UpdatedAt   string `json:"updated_at"`
+}

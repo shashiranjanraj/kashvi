@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"{{.Module}}/app/dto"
 	"{{.Module}}/app/models"
 	"{{.Module}}/app/repositories"
 	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"
@@ -30,15 +31,21 @@ func (c *{{.Name}}Controller) Index(ctx *appctx.Context) {
 
 // POST /{{.Lower}}s
 func (c *{{.Name}}Controller) Store(ctx *appctx.Context) {
-	var input models.{{.Name}}
+	var input dto.Create{{.Name}}Request
 	if !ctx.BindJSON(&input) {
 		return
 	}
-	if err := c.repo.Create(&input); err != nil {
+	model := &models.{{.Name}}{
+		Name:        input.Name,
+		Description: input.Description,
+		Price:       input.Price,
+		SKU:         input.SKU,
+	}
+	if err := c.repo.Create(model); err != nil {
 		ctx.Error(http.StatusBadRequest, "Failed to create {{.Lower}}")
 		return
 	}
-	ctx.Created(input)
+	ctx.Created(model)
 }
 
 // GET /{{.Lower}}s/{id}
@@ -68,8 +75,21 @@ func (c *{{.Name}}Controller) Update(ctx *appctx.Context) {
 		ctx.NotFound("{{.Name}} not found")
 		return
 	}
-	if !ctx.BindJSON(item) {
+	var input dto.Update{{.Name}}Request
+	if !ctx.BindJSON(&input) {
 		return
+	}
+	if input.Name != nil {
+		item.Name = *input.Name
+	}
+	if input.Description != nil {
+		item.Description = *input.Description
+	}
+	if input.Price != nil {
+		item.Price = *input.Price
+	}
+	if input.SKU != nil {
+		item.SKU = *input.SKU
 	}
 	if err := c.repo.Update(item); err != nil {
 		ctx.Error(http.StatusBadRequest, "Failed to update {{.Lower}}")

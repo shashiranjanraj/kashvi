@@ -1,6 +1,6 @@
 package controllers
 
-// For full CRUD with repository layer use make:resource (generates repository + resource_controller).
+// For full CRUD with repository and DTOs use make:resource (generates repository + controller + dto).
 import (
 	"net/http"
 	appctx "github.com/shashiranjanraj/kashvi/pkg/ctx"

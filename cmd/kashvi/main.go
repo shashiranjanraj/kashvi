@@ -49,6 +49,7 @@ func init() {
 	// Scaffolding generators — always available, they only create files.
 	rootCmd.AddCommand(newCmd)
 	rootCmd.AddCommand(makeModelCmd)
+	rootCmd.AddCommand(makeDtoCmd)
 	rootCmd.AddCommand(makeControllerCmd)
 	rootCmd.AddCommand(makeServiceCmd)
 	rootCmd.AddCommand(makeRepositoryCmd)
