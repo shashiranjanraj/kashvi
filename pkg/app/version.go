@@ -1,4 +1,4 @@
 package app
 
 // Version is the current release version of the Kashvi framework.
-const Version = "1.1.0"
+const Version = "1.1.1"
