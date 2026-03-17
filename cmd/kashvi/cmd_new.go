@@ -34,6 +34,7 @@ var newCmd = &cobra.Command{
 			"config",
 			"database/migrations",
 			"database/seeders",
+			"testdata",
 		}
 
 		for _, dir := range dirs {
@@ -112,6 +113,38 @@ func RegisterRoutes(r *router.Router) {
 }
 `
 	if err := os.WriteFile(filepath.Join(projectPath, "app", "routes", "api.go"), []byte(routesData), 0o644); err != nil {
+		return err
+	}
+
+	// Basic API test skeleton using Kashvi testkit.
+	// Users can add JSON scenarios under testdata/ and extend as needed.
+	testData := `package main
+
+import (
+	"net/http"
+	"testing"
+
+	"` + projectName + `/app/routes"
+
+	"github.com/shashiranjanraj/kashvi/pkg/app"
+	"github.com/shashiranjanraj/kashvi/pkg/testkit"
+)
+
+// buildHandler constructs the http.Handler for tests without starting servers.
+func buildHandler() http.Handler {
+	return app.New().
+		Routes(routes.RegisterRoutes).
+		Handler()
+}
+
+// TestAPI runs all JSON scenario files in the testdata/ directory
+// against the application's HTTP handler.
+func TestAPI(t *testing.T) {
+	handler := buildHandler()
+	testkit.RunDir(t, handler, "testdata")
+}
+`
+	if err := os.WriteFile(filepath.Join(projectPath, "api_test.go"), []byte(testData), 0o644); err != nil {
 		return err
 	}
 

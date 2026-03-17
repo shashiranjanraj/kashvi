@@ -38,6 +38,7 @@ package app
 
 import (
 	"fmt"
+	"net/http"
 	"os"
 
 	"github.com/shashiranjanraj/kashvi/pkg/router"
@@ -90,6 +91,19 @@ func (a *Application) AutoMigrate(models ...interface{}) *Application {
 func (a *Application) Seeders(fns ...SeederFunc) *Application {
 	a.seeders = append(a.seeders, fns...)
 	return a
+}
+
+// Handler builds and returns the application's http.Handler without starting
+// any servers. This is primarily intended for tests (e.g. with pkg/testkit).
+//
+// Example:
+//
+//	handler := app.New().
+//	    Routes(routes.RegisterRoutes).
+//	    Handler()
+//	testkit.RunDir(t, handler, "testdata")
+func (a *Application) Handler() http.Handler {
+	return buildHandler(a)
 }
 
 // Run reads os.Args and dispatches to the appropriate command.
