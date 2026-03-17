@@ -3,6 +3,7 @@ package router
 import (
 	"net/http"
 
+	"github.com/shashiranjanraj/kashvi/config"
 	"github.com/shashiranjanraj/kashvi/pkg/apperror"
 	"github.com/shashiranjanraj/kashvi/pkg/logger"
 	"github.com/shashiranjanraj/kashvi/pkg/response"
@@ -23,10 +24,27 @@ func Wrap(h ErrHandlerFunc) http.HandlerFunc {
 			
 			// Log the internal error if there is one
 			if appErr.Err != nil {
-				logger.Error("handler error", "error", appErr.Err.Error(), "status", appErr.StatusCode, "path", r.URL.Path)
+				log := logger.WithCtx(r.Context())
+				log.Error("handler error",
+					"error", appErr.Err.Error(),
+					"status", appErr.StatusCode,
+					"path", r.URL.Path,
+					"at", appErr.Location,
+				)
 			}
 
-			// Reply to the client
+			// Reply to the client (include debug info only in development)
+			if config.AppEnv() == "local" || config.AppEnv() == "development" || config.AppEnv() == "dev" {
+				var cause string
+				if appErr.Err != nil {
+					cause = appErr.Err.Error()
+				}
+				response.DebugError(w, appErr.StatusCode, appErr.Message, map[string]any{
+					"at":    appErr.Location,
+					"cause": cause,
+				})
+				return
+			}
 			response.Error(w, appErr.StatusCode, appErr.Message)
 		}
 	}

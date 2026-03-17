@@ -3,6 +3,8 @@ package apperror
 import (
 	"fmt"
 	"net/http"
+	"runtime"
+	"strings"
 )
 
 // Error represents a structured HTTP error.
@@ -11,6 +13,9 @@ type Error struct {
 	StatusCode int
 	Message    string
 	Err        error // Optional internal error for logging purposes
+	// Location is the best-effort file:line where this error was created.
+	// Intended for logs (and optional dev-only responses).
+	Location string
 }
 
 // Error implements the standard error interface.
@@ -26,12 +31,35 @@ func (e *Error) Unwrap() error {
 	return e.Err
 }
 
+func callerLocation(skip int) string {
+	// +skip: runtime.Caller skip values:
+	// 0 = callerLocation
+	// 1 = New
+	// 2 = helper like Internal/BadRequest
+	// 3 = the user's code (typically)
+	for i := skip; i < skip+25; i++ {
+		_, file, line, ok := runtime.Caller(i)
+		if !ok {
+			return ""
+		}
+		// Prefer first frame outside the Kashvi framework packages.
+		// If Kashvi is used as a library, the user's module path will differ,
+		// so we conservatively skip only apperror internals.
+		if strings.Contains(file, "/pkg/apperror/") {
+			continue
+		}
+		return fmt.Sprintf("%s:%d", file, line)
+	}
+	return ""
+}
+
 // New creates a new structured Error.
 func New(statusCode int, message string, err error) *Error {
 	return &Error{
 		StatusCode: statusCode,
 		Message:    message,
 		Err:        err,
+		Location:   callerLocation(2),
 	}
 }
 

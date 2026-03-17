@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"runtime/debug"
 
+	"github.com/shashiranjanraj/kashvi/config"
 	"github.com/shashiranjanraj/kashvi/pkg/logger"
 	"github.com/shashiranjanraj/kashvi/pkg/response"
 )
@@ -23,13 +24,22 @@ func Recovery(next http.Handler) http.Handler {
 		defer func() {
 			if err := recover(); err != nil {
 				stack := debug.Stack()
-				logger.Error("panic recovered",
+				log := logger.WithCtx(r.Context())
+				log.Error("panic recovered",
 					"error", fmt.Sprintf("%v", err),
 					"stack", string(stack),
 					"method", r.Method,
 					"path", r.URL.Path,
 				)
-				response.Error(w, http.StatusInternalServerError, fmt.Sprintf("Internal Server Error: %v", err))
+
+				// Never leak panic details in production responses.
+				if config.AppEnv() == "local" || config.AppEnv() == "development" || config.AppEnv() == "dev" {
+					response.DebugError(w, http.StatusInternalServerError, "Internal Server Error", map[string]any{
+						"panic": fmt.Sprintf("%v", err),
+					})
+					return
+				}
+				response.Error(w, http.StatusInternalServerError, "Internal Server Error")
 			}
 		}()
 		next.ServeHTTP(w, r)
