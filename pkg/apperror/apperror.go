@@ -1,6 +1,7 @@
 package apperror
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"runtime"
@@ -100,7 +101,8 @@ func TryConvert(err error) *Error {
 	if err == nil {
 		return nil
 	}
-	if appErr, ok := err.(*Error); ok {
+	var appErr *Error
+	if errors.As(err, &appErr) {
 		return appErr
 	}
 	return Internal(err)
