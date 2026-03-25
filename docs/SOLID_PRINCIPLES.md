@@ -1,6 +1,21 @@
-# Kashvi & SOLID Principles
+# Kashvi and SOLID principles
 
-This document assesses how Kashvi’s request flow and architecture align with the **SOLID** principles and where they could be strengthened.
+How Kashvi’s architecture maps to **SOLID**, and practical tips for your app layer (especially repository interfaces).
+
+**Related:** [Documentation index](README.md) · [Request flow](REQUEST_FLOW.md)
+
+---
+
+## Table of contents
+
+- [Summary](#summary)
+- [S — Single Responsibility](#s--single-responsibility-principle)
+- [O — Open/Closed](#o--openclosed-principle)
+- [L — Liskov Substitution](#l--liskov-substitution-principle)
+- [I — Interface Segregation](#i--interface-segregation-principle)
+- [D — Dependency Inversion](#d--dependency-inversion-principle)
+- [Recommendations](#recommendations-for-stronger-solid-in-your-app)
+- [Conclusion](#conclusion)
 
 ---
 

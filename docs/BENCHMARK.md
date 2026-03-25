@@ -1,6 +1,17 @@
 # Benchmarking Kashvi
 
-This guide explains how to run and interpret benchmarks for the Kashvi framework.
+How to run **Go benchmarks** in this repo and how to **load-test** a running server.
+
+**Related:** [Documentation index](README.md) · [Main README](../README.md)
+
+---
+
+## Table of contents
+
+1. [Go benchmarks](#1-go-benchmarks-unit--in-process)
+2. [Available benchmarks](#2-available-benchmarks)
+3. [End-to-end load test](#3-end-to-end-load-test-real-server--http-client)
+4. [Tips](#4-tips)
 
 ---
 

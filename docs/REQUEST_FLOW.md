@@ -1,6 +1,22 @@
-# Kashvi Request Flow & Middleware
+# Kashvi request flow and middleware
 
-This document describes how an HTTP request travels through Kashvi and the order of all middleware and handlers.
+How an HTTP request travels through Kashvi: **global middleware order**, **route groups**, **handlers**, and where **validation** runs.
+
+**Related:** [Documentation index](README.md) · [Main README](../README.md) · [Error handling](ERROR_HANDLING.md)
+
+---
+
+## Table of contents
+
+1. [High-level flow](#1-high-level-flow)
+2. [Middleware order](#2-middleware-order-request-in--response-out)
+3. [Where middleware is registered](#3-where-middleware-is-registered)
+4. [Handler types and application layers](#4-handler-types-and-application-layers)
+5. [Special routes](#5-special-routes)
+6. [Sequence example](#6-sequence-example-get-apiproducts-with-auth-group)
+7. [Handler → DB request flow](#7-handler--db-request-flow)
+8. [Validation and data extraction](#8-validation-and-data-extraction)
+9. [Summary](#9-summary)
 
 ---
 
@@ -28,9 +44,9 @@ This document describes how an HTTP request travels through Kashvi and the order
     └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
                                                               │
     ┌─────────────────────────────────────────────────────────▼─────────────────────────────────────────────────────────┐
-    │  GROUP / PER-ROUTE MIDDLEWARE (if any) — e.g. api := r.Group("/api", middleware.Auth())                           │
+    │  GROUP / PER-ROUTE MIDDLEWARE (if any) — e.g. api := r.Group("/api", middleware.AuthMiddleware)                   │
     │  • Auth          │ Validate Bearer JWT, inject user_id + role into request context                               │
-    │  • Custom        │ Any middleware passed to Group() or to Get/Post(..., middlewares...)                           │
+    │  • Custom        │ Any middleware passed to Group() or to Get/Post(..., extraMiddleware...)                     │
     └───────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
                                                               │
     ┌─────────────────────────────────────────────────────────▼─────────────────────────────────────────────────────────┐
@@ -83,14 +99,21 @@ r.Use(middleware.RateLimit(200, time.Minute))
 **Group middleware** (e.g. auth) is added when you create a group:
 
 ```go
-api := r.Group("/api", middlewares.Auth())
-api.Get("/profile", "profile", ctx.Wrap(ctrl.Profile))  // Auth runs before ctrl.Profile
+import "github.com/shashiranjanraj/kashvi/pkg/middleware"
+
+api := r.Group("/api", middleware.AuthMiddleware)
+api.Get("/profile", "profile", ctx.Wrap(ctrl.Profile)) // Auth runs before ctrl.Profile
 ```
 
-**Per-route middleware** can be passed as variadics:
+**Per-route middleware** can be passed as variadics (example: auth + role check from `pkg/rbac`):
 
 ```go
-r.Get("/admin", "admin", ctx.Wrap(adminPage), middlewares.Auth(), middlewares.RequireRole("admin"))
+import (
+    "github.com/shashiranjanraj/kashvi/pkg/middleware"
+    "github.com/shashiranjanraj/kashvi/pkg/rbac"
+)
+
+r.Get("/admin", "admin", ctx.Wrap(adminPage), middleware.AuthMiddleware, rbac.HasRole("admin"))
 ```
 
 Router’s `chain()` builds: **handler** wrapped by **route middlewares** (right-to-left), then that chain is what Chi calls after the global stack.

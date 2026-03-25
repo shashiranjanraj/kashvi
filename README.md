@@ -1,5 +1,23 @@
 # Kashvi Framework Documentation
 
+Find topics quickly: **[Documentation map](#documentation-map)** · **[Docs index](docs/README.md)** · **[Request flow](docs/REQUEST_FLOW.md)** · **[Error handling](docs/ERROR_HANDLING.md)** · Search this page with your editor (`Cmd+F` / `Ctrl+F`).
+
+## Documentation map
+
+| Goal | Where to read |
+|------|----------------|
+| Install CLI, new project, first run | [Installation](#installation) · [Quick start](#quick-start) |
+| Middleware order, validation placement, handler → DB | [`docs/REQUEST_FLOW.md`](docs/REQUEST_FLOW.md) |
+| Full CRUD (model → DTO → migration → repo → tests) | [Complete CRUD walkthrough](#complete-crud-walkthrough-model--migration--repository--service--controller--validation--auth--seed--test) |
+| App logs and SQL (`LOG_LEVEL`, `DB_LOG_MODE`) | [Logging](#logging-app-and-database) |
+| `errors.Is` / `errors.As`, `apperror`, `router.Wrap` | [`docs/ERROR_HANDLING.md`](docs/ERROR_HANDLING.md) |
+| CLI (`migrate`, `make:resource`, …) | [CLI commands](#cli-commands) |
+| Browse by keyword and package | [`docs/README.md`](docs/README.md) |
+
+**Popular links:** [Routing](#routing) · [Context](#context) · [Authentication](#authentication) · [Middleware](#middleware) · [Database](#database) · [Validation](#validation) · [Queues](#queues) · [Testing](#testing) · [SOLID](docs/SOLID_PRINCIPLES.md) · [Benchmarks](docs/BENCHMARK.md)
+
+---
+
 ## Overview
 
 Kashvi is a Laravel-inspired Go web framework designed for rapid application development. It provides a clean, expressive API with powerful features like ORM, migrations, authentication, caching, queues, and more. Built on top of proven libraries like GORM, Chi router, and Redis, Kashvi helps you build scalable web applications and APIs quickly.
@@ -41,15 +59,13 @@ Kashvi follows **MVC** with a repository layer and DTOs. Controllers handle HTTP
 
 Controllers bind incoming JSON to **DTOs** (e.g. `CreateProductRequest`), validate them, then map to **models** and use **repositories** (e.g. `ProductRepository`) instead of calling `orm.DB()` directly.
 
-**Where to start:** After [Installation](#installation) and [Configure Environment](#4-configure-environment), read [Logging](#logging-app-and-database) for app/DB log settings, then follow the [Complete CRUD walkthrough](#complete-crud-walkthrough-model--migration--repository--service--controller--validation--auth--seed--test) to use model, DTOs, migration, repository, controller, validation, auth, seeder, and tests together.
-
-For request flow and middleware order, see **[docs/REQUEST_FLOW.md](docs/REQUEST_FLOW.md)**. For SOLID alignment see **[docs/SOLID_PRINCIPLES.md](docs/SOLID_PRINCIPLES.md)**. For benchmarks see **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
+**Where to start:** Use the [documentation map](#documentation-map) above, or go straight to [Installation](#installation), [Configure environment](#4-configure-environment), [Logging](#logging-app-and-database), then the [Complete CRUD walkthrough](#complete-crud-walkthrough-model--migration--repository--service--controller--validation--auth--seed--test). Deeper dives: **[docs/REQUEST_FLOW.md](docs/REQUEST_FLOW.md)** (middleware and flow), **[docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md)** (errors), **[docs/SOLID_PRINCIPLES.md](docs/SOLID_PRINCIPLES.md)**, **[docs/BENCHMARK.md](docs/BENCHMARK.md)**.
 
 ## Installation
 
 ### 1. Install Go
 
-Ensure you have Go 1.22 or later installed.
+Ensure you have Go 1.24 or later installed (see `go.mod` in this repo).
 
 ### 2. Install Kashvi CLI
 
@@ -330,7 +346,7 @@ func NewUserController(repo *repositories.UserRepository) *UserController {
 	return &UserController{repo: repo}
 }
 
-func (c *UserController) Show(ctx *appctx.Context) {
+func (c *UserController) Show(ctx *ctx.Context) {
 	id, _ := strconv.ParseUint(ctx.Param("id"), 10, 32)
 	user, err := c.repo.FindByID(uint(id))
 	if err != nil {
@@ -462,7 +478,7 @@ To add **logging** (e.g. for create):
 ```go
 import "github.com/shashiranjanraj/kashvi/pkg/logger"
 
-func (c *ProductController) Store(ctx *appctx.Context) {
+func (c *ProductController) Store(ctx *ctx.Context) {
     var input dto.CreateProductRequest
     if !ctx.BindJSON(&input) {
         return
@@ -566,7 +582,9 @@ curl -X DELETE http://localhost:8080/api/products/1
 
 ```go
 func TestProductAPI(t *testing.T) {
-    handler := app.BuildHandler(/* your app with routes */)
+    handler := app.New().
+        Routes(RegisterRoutes).
+        Handler()
     testkit.RunDir(t, handler, "testdata")
 }
 ```
@@ -590,7 +608,7 @@ Put request/response JSON fixtures in `testdata/` as referenced by the scenario 
 | **Seeder** | `app.RegisterSeeder("key", func() { ... })` |
 | **Test** | testkit + JSON scenarios in `testdata/` |
 
-**See also:** [Request flow & middleware](docs/REQUEST_FLOW.md) · [Validation](#validation) · [Authentication](#authentication) · [Database](#database) (migrations, seeders) · [Benchmarks](docs/BENCHMARK.md)
+**See also:** [Request flow & middleware](docs/REQUEST_FLOW.md) · [Error handling](docs/ERROR_HANDLING.md) · [Validation](#validation) · [Authentication](#authentication) · [Database](#database) (migrations, seeders) · [Benchmarks](docs/BENCHMARK.md)
 
 ## CLI Commands
 
@@ -702,11 +720,16 @@ Configure JWT secret in `.env`:
 JWT_SECRET=your-super-secret-key
 ```
 
-### Auth Middleware
+### Auth middleware
+
+Apply JWT validation to a **route group** (recommended). The package is `github.com/shashiranjanraj/kashvi/pkg/middleware`.
 
 ```go
-r.Use(middlewares.Auth())
+api := r.Group("/api", middleware.AuthMiddleware)
+api.Get("/me", "me", ctx.Wrap(meHandler))
 ```
+
+For role checks after auth, use `github.com/shashiranjanraj/kashvi/pkg/rbac` (e.g. `rbac.HasRole("admin")`) on a nested group.
 
 ### Login Example
 
@@ -723,13 +746,13 @@ func Login(c *ctx.Context) {
     
     // Verify credentials
     user := &models.User{}
-    if err := orm.DB().Where("email = ?", input.Email).First(user).Error; err != nil {
+    if err := orm.DB().Where("email = ?", input.Email).First(user); err != nil {
         c.Error(http.StatusUnauthorized, "Invalid credentials")
         return
     }
     
     // Generate token
-    token, err := auth.GenerateJWT(user.ID)
+    token, err := auth.GenerateToken(user.ID, "user")
     if err != nil {
         c.Error(http.StatusInternalServerError, "Failed to generate token")
         return
@@ -762,7 +785,7 @@ value := cache.Remember("key", time.Hour, func() interface{} {
 ### In Controllers
 
 ```go
-func (c *ProductController) Index(ctx *appctx.Context) {
+func (c *ProductController) Index(ctx *ctx.Context) {
     var products []models.Product
     
     // Try cache first
@@ -839,34 +862,41 @@ Kashvi uses JSON-based test scenarios. Create `testdata/user_scenarios.json`:
 
 ```go
 func TestUserAPI(t *testing.T) {
-    // Build your app handler
-    handler := app.BuildHandler()
-    
-    // Run all scenarios in testdata/
+    // Use the same Routes(...) registration as production.
+    handler := app.New().
+        Routes(RegisterRoutes).
+        Handler()
     testkit.RunDir(t, handler, "testdata")
 }
 ```
 
 ## Middleware
 
-### Built-in Middleware
+### Built-in middleware
 
-- `middlewares.Auth()` - JWT authentication
-- `middlewares.CORS()` - Cross-origin resource sharing
-- `middlewares.Logger()` - Request logging
-- `middlewares.RateLimit()` - Rate limiting
-- `middlewares.Recover()` - Panic recovery
+The **HTTP kernel** already registers metrics, recovery, request ID, logger, session, CORS, and rate limiting (see [`docs/REQUEST_FLOW.md`](docs/REQUEST_FLOW.md)). In your routes you typically add **JWT** and optional **RBAC** per group.
 
-### Usage
+| Symbol | Role |
+|--------|------|
+| `middleware.AuthMiddleware` | Validates `Authorization: Bearer` and sets user context |
+| `middleware.CORS(opts)` | CORS; use `middleware.DefaultCORSOptions()` or custom `CORSOptions` |
+| `middleware.Logger` | Request logging (also applied globally in the kernel) |
+| `middleware.RateLimit(max, window)` | Rate limiter (also applied globally) |
+| `middleware.Recovery` | Panic recovery (also applied globally) |
+
+### Usage (typical: protect a group)
 
 ```go
-r.Use(middlewares.Logger())
-r.Use(middlewares.CORS())
-r.Use(middlewares.Recover())
+import (
+    "github.com/shashiranjanraj/kashvi/pkg/middleware"
+    "github.com/shashiranjanraj/kashvi/pkg/rbac"
+)
 
-// Protected routes
-protected := r.Group("/api", middlewares.Auth())
-protected.Get("/profile", "profile", ctx.Wrap(getProfile))
+api := r.Group("/api", middleware.AuthMiddleware)
+api.Get("/profile", "profile", ctx.Wrap(getProfile))
+
+admin := api.Group("/admin", rbac.HasRole("admin"))
+admin.Get("/reports", "admin.reports", ctx.Wrap(reportsHandler))
 ```
 
 ## WebSockets
@@ -931,7 +961,7 @@ kashvi build
 Create `Dockerfile`:
 
 ```dockerfile
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -1000,6 +1030,8 @@ func CreateUser(c *ctx.Context) {
     c.Success(map[string]string{"message": "User created"})
 }
 ```
+
+For `errors.Is`, `errors.As`, wrapping with `%w`, and HTTP errors from handlers using `router.Wrap`, see **[docs/ERROR_HANDLING.md](docs/ERROR_HANDLING.md)**.
 
 ### Validation
 
@@ -1174,7 +1206,7 @@ func Auth() func(http.Handler) http.Handler {
 }
 
 // Usage
-protected := r.Group("/api", middleware.Auth())
+protected := r.Group("/api", middleware.AuthMiddleware)
 protected.Get("/profile", "profile", ctx.Wrap(getProfile))
 ```
 
@@ -1781,9 +1813,11 @@ import (
 var handler http.Handler
 
 func init() {
-    handler = app.BuildHandler(func(r *router.Router) {
-        r.Get("/api/users", "users.index", userHandler)
-    })
+    handler = app.New().
+        Routes(func(r *router.Router) {
+            r.Get("/api/users", "users.index", userHandler)
+        }).
+        Handler()
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -1795,7 +1829,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless
@@ -2003,7 +2037,7 @@ func Auth() func(http.Handler) http.Handler {
 }
 
 // Usage
-protected := r.Group("/api", middleware.Auth())
+protected := r.Group("/api", middleware.AuthMiddleware)
 protected.Get("/profile", "profile", ctx.Wrap(getProfile))
 ```
 
@@ -2610,9 +2644,11 @@ import (
 var handler http.Handler
 
 func init() {
-    handler = app.BuildHandler(func(r *router.Router) {
-        r.Get("/api/users", "users.index", userHandler)
-    })
+    handler = app.New().
+        Routes(func(r *router.Router) {
+            r.Get("/api/users", "users.index", userHandler)
+        }).
+        Handler()
 }
 
 func Handler(w http.ResponseWriter, r *http.Request) {
@@ -2624,7 +2660,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless
@@ -2722,9 +2758,4 @@ func (sm *ShardManager) GetShard(userID uint) *gorm.DB {
 // Usage
 shard := GetShardManager().GetShard(user.ID)
 shard.Create(&user)
-```</content>
-</xai:function_call) 
-
-<xai:function_call name="replace_string_in_file">
-<parameter name="filePath">/Users/shashi/devlopment/kashvi/README.md</content>
-<parameter name="filePath">/Users/shashi/devlopment/kashvi/README.md
+```
