@@ -120,7 +120,7 @@ func DecryptBytes(encoded string) ([]byte, error) {
 }
 
 // EncryptJSON marshals v to JSON then encrypts it.
-func EncryptJSON(v interface{}) (string, error) {
+func EncryptJSON(v any) (string, error) {
 	raw, err := json.Marshal(v)
 	if err != nil {
 		return "", fmt.Errorf("crypt: marshal: %w", err)
@@ -129,7 +129,7 @@ func EncryptJSON(v interface{}) (string, error) {
 }
 
 // DecryptJSON decrypts encoded and unmarshals the result into dest.
-func DecryptJSON(encoded string, dest interface{}) error {
+func DecryptJSON(encoded string, dest any) error {
 	raw, err := DecryptBytes(encoded)
 	if err != nil {
 		return err

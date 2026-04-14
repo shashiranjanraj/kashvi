@@ -74,7 +74,7 @@ func TestFailedJobRetry(t *testing.T) {
 func TestDispatchConcurrent(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(20)
-	for i := 0; i < 20; i++ {
+	for range 20 {
 		go func() {
 			defer wg.Done()
 			queue.Dispatch(&echoJob{Val: "c", called: &atomic.Int32{}}) //nolint:errcheck

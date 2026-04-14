@@ -60,10 +60,10 @@ import (
 
 // Struct validates all exported fields of v that carry a `validate` tag.
 // Returns a map of fieldName → error message; empty map means no errors.
-func Struct(v interface{}) map[string]string {
+func Struct(v any) map[string]string {
 	errs := make(map[string]string)
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
@@ -329,7 +329,7 @@ func isEmpty(v reflect.Value) bool {
 		return strings.TrimSpace(v.String()) == ""
 	case reflect.Slice, reflect.Map, reflect.Array:
 		return v.Len() == 0
-	case reflect.Ptr, reflect.Interface:
+	case reflect.Pointer, reflect.Interface:
 		return v.IsNil()
 	case reflect.Bool:
 		return false // false is a valid boolean value, not empty

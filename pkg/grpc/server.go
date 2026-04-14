@@ -54,10 +54,10 @@ var (
 // INTERNAL error instead of crashing the process.
 func recoveryInterceptor(
 	ctx context.Context,
-	req interface{},
+	req any,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
-) (resp interface{}, err error) {
+) (resp any, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			logger.Error("grpc: panic recovered",
@@ -74,10 +74,10 @@ func recoveryInterceptor(
 // loggingInterceptor logs each unary RPC call with its duration and result.
 func loggingInterceptor(
 	ctx context.Context,
-	req interface{},
+	req any,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
-) (interface{}, error) {
+) (any, error) {
 	start := time.Now()
 	resp, err := handler(ctx, req)
 	dur := time.Since(start)
@@ -98,10 +98,10 @@ func loggingInterceptor(
 // metricsInterceptor records Prometheus counters and histograms per RPC.
 func metricsInterceptor(
 	ctx context.Context,
-	req interface{},
+	req any,
 	info *grpc.UnaryServerInfo,
 	handler grpc.UnaryHandler,
-) (interface{}, error) {
+) (any, error) {
 	start := time.Now()
 	resp, err := handler(ctx, req)
 	dur := time.Since(start)
@@ -121,15 +121,15 @@ func metricsInterceptor(
 func chainUnary(interceptors ...grpc.UnaryServerInterceptor) grpc.UnaryServerInterceptor {
 	return func(
 		ctx context.Context,
-		req interface{},
+		req any,
 		info *grpc.UnaryServerInfo,
 		handler grpc.UnaryHandler,
-	) (interface{}, error) {
+	) (any, error) {
 		chain := handler
 		for i := len(interceptors) - 1; i >= 0; i-- {
 			i := i
 			next := chain
-			chain = func(ctx context.Context, req interface{}) (interface{}, error) {
+			chain = func(ctx context.Context, req any) (any, error) {
 				return interceptors[i](ctx, req, info, next)
 			}
 		}

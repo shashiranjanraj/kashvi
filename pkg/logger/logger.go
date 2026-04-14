@@ -7,12 +7,12 @@ import (
 // Logger is the generic interface for logging in Kashvi.
 // It accepts alternating key-value pairs in args...
 type Logger interface {
-	Debug(msg string, args ...interface{})
-	Info(msg string, args ...interface{})
-	Warn(msg string, args ...interface{})
-	Error(msg string, args ...interface{})
-	
-	With(args ...interface{}) Logger
+	Debug(msg string, args ...any)
+	Info(msg string, args ...any)
+	Warn(msg string, args ...any)
+	Error(msg string, args ...any)
+
+	With(args ...any) Logger
 	Sync() error
 }
 
@@ -45,8 +45,8 @@ func InjectLogger(ctx context.Context, log Logger) context.Context {
 // Short-hand helpers (use base logger)
 // ─────────────────────────────────────────────
 
-func Debug(msg string, args ...interface{}) { L.Debug(msg, args...) }
-func Info(msg string, args ...interface{})  { L.Info(msg, args...) }
-func Warn(msg string, args ...interface{})  { L.Warn(msg, args...) }
-func Error(msg string, args ...interface{}) { L.Error(msg, args...) }
-func Sync() error                           { return L.Sync() }
+func Debug(msg string, args ...any) { L.Debug(msg, args...) }
+func Info(msg string, args ...any)  { L.Info(msg, args...) }
+func Warn(msg string, args ...any)  { L.Warn(msg, args...) }
+func Error(msg string, args ...any) { L.Error(msg, args...) }
+func Sync() error                   { return L.Sync() }

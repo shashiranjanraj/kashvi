@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"math"
 	gohttp "net/http"
 	"time"
@@ -61,7 +62,7 @@ type Request struct {
 	method    string
 	url       string
 	headers   map[string]string
-	body      interface{}
+	body      any
 	timeout   time.Duration
 	retries   int
 	retryWait time.Duration
@@ -103,9 +104,7 @@ func (r *Request) Header(key, value string) *Request {
 
 // Headers merges a map of headers.
 func (r *Request) Headers(h map[string]string) *Request {
-	for k, v := range h {
-		r.headers[k] = v
-	}
+	maps.Copy(r.headers, h)
 	return r
 }
 
@@ -116,7 +115,7 @@ func (r *Request) Bearer(token string) *Request {
 
 // Body sets the request body. v is marshalled to JSON automatically.
 // Pass a string or []byte to send raw bodies.
-func (r *Request) Body(v interface{}) *Request {
+func (r *Request) Body(v any) *Request {
 	r.body = v
 	return r
 }
@@ -239,7 +238,7 @@ func (r *Response) OK() bool {
 }
 
 // JSON unmarshals the response body into dest.
-func (r *Response) JSON(dest interface{}) error {
+func (r *Response) JSON(dest any) error {
 	if err := json.Unmarshal(r.Raw, dest); err != nil {
 		return fmt.Errorf("http: decode JSON: %w", err)
 	}

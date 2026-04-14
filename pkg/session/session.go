@@ -55,7 +55,7 @@ type ctxKey struct{}
 // Session is an in-request session handle.
 type Session struct {
 	id      string
-	data    map[string]interface{}
+	data    map[string]any
 	opts    Options
 	changed bool
 }
@@ -72,22 +72,22 @@ func newID() (string, error) {
 func redisKey(id string) string { return "kashvi:session:" + id }
 
 // load fetches session data from Redis.
-func load(id string) (map[string]interface{}, error) {
-	var data map[string]interface{}
+func load(id string) (map[string]any, error) {
+	var data map[string]any
 	if cache.Get(redisKey(id), &data) {
 		return data, nil
 	}
-	return map[string]interface{}{}, nil
+	return map[string]any{}, nil
 }
 
 // Set stores a value under key in the session.
-func (s *Session) Set(key string, value interface{}) {
+func (s *Session) Set(key string, value any) {
 	s.data[key] = value
 	s.changed = true
 }
 
 // Get retrieves a value from the session.
-func (s *Session) Get(key string) (interface{}, bool) {
+func (s *Session) Get(key string) (any, bool) {
 	v, ok := s.data[key]
 	return v, ok
 }
@@ -124,12 +124,12 @@ func (s *Session) Delete(key string) {
 }
 
 // Flash stores a value that is auto-deleted after the next Get.
-func (s *Session) Flash(key string, value interface{}) {
+func (s *Session) Flash(key string, value any) {
 	s.Set("_flash_"+key, value)
 }
 
 // GetFlash retrieves and removes a flash value.
-func (s *Session) GetFlash(key string) (interface{}, bool) {
+func (s *Session) GetFlash(key string) (any, bool) {
 	v, ok := s.Get("_flash_" + key)
 	if ok {
 		s.Delete("_flash_" + key)
@@ -139,7 +139,7 @@ func (s *Session) GetFlash(key string) (interface{}, bool) {
 
 // Invalidate destroys the session (logout).
 func (s *Session) Invalidate() {
-	s.data = map[string]interface{}{}
+	s.data = map[string]any{}
 	s.changed = true
 }
 
@@ -190,7 +190,7 @@ func Middleware(opts Options) func(http.Handler) http.Handler {
 			} else {
 				id, _ := newID()
 				sess.id = id
-				sess.data = map[string]interface{}{}
+				sess.data = map[string]any{}
 			}
 
 			ctx := context.WithValue(r.Context(), ctxKey{}, sess)
@@ -206,5 +206,5 @@ func FromCtx(r *http.Request) *Session {
 		return s
 	}
 	id, _ := newID()
-	return &Session{id: id, data: map[string]interface{}{}, opts: DefaultOptions()}
+	return &Session{id: id, data: map[string]any{}, opts: DefaultOptions()}
 }

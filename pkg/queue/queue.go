@@ -133,7 +133,7 @@ func (m *Manager) push(job Job) error {
 // StartWorkers launches n concurrent workers that process jobs from the queue.
 // The workers run until ctx is cancelled.
 func StartWorkers(ctx context.Context, n int) {
-	for i := 0; i < n; i++ {
+	for range n {
 		go defaultManager.work(ctx)
 	}
 	logger.Info("queue: workers started", "count", n)

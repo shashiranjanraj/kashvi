@@ -7,12 +7,12 @@ import (
 )
 
 // Factory is a function that produces a service instance.
-type Factory func() interface{}
+type Factory func() any
 
 var (
 	mu         sync.RWMutex
 	bindings   = map[string]Factory{}
-	singletons = map[string]interface{}{}
+	singletons = map[string]any{}
 )
 
 // Bind registers a factory under key. Each call to Make invokes factory anew.
@@ -34,7 +34,7 @@ func Singleton(key string, factory Factory) {
 
 // Make resolves and returns the service registered under key.
 // Panics if the key has not been bound (same behaviour as Laravel's container).
-func Make(key string) interface{} {
+func Make(key string) any {
 	mu.Lock()
 	defer mu.Unlock()
 

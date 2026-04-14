@@ -62,7 +62,7 @@ func RegisterSeeder(name string, fn SeederFunc) {
 // Build one with New(), attach your configuration, then call Run().
 type Application struct {
 	routesFns []func(*router.Router)
-	models    []interface{}
+	models    []any
 	seeders   []SeederFunc
 }
 
@@ -81,7 +81,7 @@ func (a *Application) Routes(fn func(*router.Router)) *Application {
 
 // AutoMigrate adds GORM models that will be auto-migrated on server start.
 // Pass model pointers: app.New().AutoMigrate(&User{}, &Product{})
-func (a *Application) AutoMigrate(models ...interface{}) *Application {
+func (a *Application) AutoMigrate(models ...any) *Application {
 	a.models = append(a.models, models...)
 	return a
 }

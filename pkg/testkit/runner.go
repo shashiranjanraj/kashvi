@@ -57,7 +57,6 @@ func RunDir(t *testing.T, handler http.Handler, dir string) {
 	}
 
 	for _, path := range entries {
-		path := path // loop variable capture
 		s, err := LoadScenario(path)
 		if err != nil {
 			t.Errorf("testkit: load %q: %v", path, err)

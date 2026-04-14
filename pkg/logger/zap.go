@@ -62,12 +62,12 @@ func NewZapDefault() Logger {
 	return &ZapLogger{sugar: zapLogger.Sugar()}
 }
 
-func (l *ZapLogger) Debug(msg string, args ...interface{}) { l.sugar.Debugw(msg, args...) }
-func (l *ZapLogger) Info(msg string, args ...interface{})  { l.sugar.Infow(msg, args...) }
-func (l *ZapLogger) Warn(msg string, args ...interface{})  { l.sugar.Warnw(msg, args...) }
-func (l *ZapLogger) Error(msg string, args ...interface{}) { l.sugar.Errorw(msg, args...) }
-func (l *ZapLogger) Sync() error                           { return l.sugar.Sync() }
+func (l *ZapLogger) Debug(msg string, args ...any) { l.sugar.Debugw(msg, args...) }
+func (l *ZapLogger) Info(msg string, args ...any)  { l.sugar.Infow(msg, args...) }
+func (l *ZapLogger) Warn(msg string, args ...any)  { l.sugar.Warnw(msg, args...) }
+func (l *ZapLogger) Error(msg string, args ...any) { l.sugar.Errorw(msg, args...) }
+func (l *ZapLogger) Sync() error                   { return l.sugar.Sync() }
 
-func (l *ZapLogger) With(args ...interface{}) Logger {
+func (l *ZapLogger) With(args ...any) Logger {
 	return &ZapLogger{sugar: l.sugar.With(args...)}
 }

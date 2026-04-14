@@ -217,7 +217,7 @@ func mergeJSONConfig(path string, out map[string]string) error {
 	}
 	defer file.Close()
 
-	var raw map[string]interface{}
+	var raw map[string]any
 	if err := json.NewDecoder(file).Decode(&raw); err != nil {
 		return fmt.Errorf("decode %s: %w", path, err)
 	}

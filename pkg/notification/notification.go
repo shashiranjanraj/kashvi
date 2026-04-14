@@ -58,7 +58,7 @@ type SlackAttachment struct {
 // WebhookData carries an arbitrary JSON payload to POST to a URL.
 type WebhookData struct {
 	URL     string
-	Payload interface{}
+	Payload any
 	Headers map[string]string
 }
 
@@ -66,7 +66,7 @@ type WebhookData struct {
 type DatabaseData struct {
 	Type    string
 	Message string
-	Data    interface{}
+	Data    any
 }
 
 // ------------------- Notification interface -------------------

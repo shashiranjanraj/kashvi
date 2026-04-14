@@ -8,10 +8,10 @@ import (
 )
 
 type envelope struct {
-	Status  int         `json:"status"`
-	Message string      `json:"message,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	Errors  interface{} `json:"errors,omitempty"`
+	Status  int    `json:"status"`
+	Message string `json:"message,omitempty"`
+	Data    any    `json:"data,omitempty"`
+	Errors  any    `json:"errors,omitempty"`
 }
 
 func write(w http.ResponseWriter, status int, body envelope) {
@@ -21,12 +21,12 @@ func write(w http.ResponseWriter, status int, body envelope) {
 }
 
 // Success sends a 200 JSON response with data.
-func Success(w http.ResponseWriter, data interface{}) {
+func Success(w http.ResponseWriter, data any) {
 	write(w, http.StatusOK, envelope{Status: http.StatusOK, Data: data})
 }
 
 // Created sends a 201 JSON response with data.
-func Created(w http.ResponseWriter, data interface{}) {
+func Created(w http.ResponseWriter, data any) {
 	write(w, http.StatusCreated, envelope{Status: http.StatusCreated, Data: data})
 }
 
@@ -45,8 +45,8 @@ func ValidationError(w http.ResponseWriter, errs map[string]string) {
 }
 
 // Paginated sends a 200 response with data and pagination metadata.
-func Paginated(w http.ResponseWriter, data interface{}, pagination orm.Pagination) {
-	body := map[string]interface{}{
+func Paginated(w http.ResponseWriter, data any, pagination orm.Pagination) {
+	body := map[string]any{
 		"items":      data,
 		"pagination": pagination,
 	}

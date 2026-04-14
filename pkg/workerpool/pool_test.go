@@ -20,7 +20,7 @@ func TestPool_SubmitAndExecute(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(n)
 
-	for i := 0; i < n; i++ {
+	for range n {
 		err := pool.SubmitWait(func() {
 			defer wg.Done()
 			count.Add(1)
@@ -106,7 +106,7 @@ func TestPool_Shutdown_NoGoroutineLeak(t *testing.T) {
 	pool := workerpool.New(10)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 50; i++ {
+	for range 50 {
 		wg.Add(1)
 		_ = pool.SubmitWait(func() {
 			defer wg.Done()

@@ -63,10 +63,10 @@ func buildHandler(a *Application) http.Handler {
 // Lives here so neither orm nor cache imports each other.
 type ormCache struct{}
 
-func (c *ormCache) Get(key string, dest interface{}) bool {
+func (c *ormCache) Get(key string, dest any) bool {
 	return cache.Get(key, dest)
 }
 
-func (c *ormCache) Set(key string, value interface{}, ttl time.Duration) error {
+func (c *ormCache) Set(key string, value any, ttl time.Duration) error {
 	return cache.Set(key, value, ttl)
 }

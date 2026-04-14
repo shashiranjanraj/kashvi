@@ -111,7 +111,7 @@ func (m *Message) Text(text string) *Message {
 
 // Template renders an html/template file with data and sets it as the body.
 // templatePath is relative to your templates directory.
-func (m *Message) Template(templatePath string, data interface{}) *Message {
+func (m *Message) Template(templatePath string, data any) *Message {
 	tmpl, err := template.ParseFiles(templatePath)
 	if err != nil {
 		m.body = fmt.Sprintf("<!-- template error: %v -->", err)
@@ -168,7 +168,7 @@ func (m *Message) Send() error {
 		}
 		return err
 	}
-	
+
 	err := smtp.SendMail(addr, auth, cfg.From, allTo, raw)
 	if err == nil {
 		logger.Debug("mail: email sent")

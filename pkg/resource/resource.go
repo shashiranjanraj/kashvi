@@ -27,12 +27,12 @@ import (
 )
 
 // Map is a convenient alias for the output of ToArray.
-type Map = map[string]interface{}
+type Map = map[string]any
 
 // Transformer defines the single method a Resource must implement.
 type Transformer interface {
 	// ToArray converts one model instance into a Map.
-	ToArray(v interface{}) Map
+	ToArray(v any) Map
 }
 
 // Base can be embedded in any Resource to satisfy future extension points.
@@ -43,12 +43,12 @@ type Base struct{}
 // Resource wraps a single model with its transformer.
 type Resource struct {
 	transformer Transformer
-	data        interface{}
+	data        any
 	meta        Map
 }
 
 // New creates a Resource for a single model instance.
-func New(t Transformer, data interface{}) *Resource {
+func New(t Transformer, data any) *Resource {
 	return &Resource{transformer: t, data: data}
 }
 
@@ -77,14 +77,14 @@ func (r *Resource) Respond(w http.ResponseWriter) {
 // Collection wraps a slice of models with a transformer.
 type Collection struct {
 	transformer Transformer
-	items       interface{}
+	items       any
 	pagination  *orm.Pagination
 	meta        Map
 }
 
 // CollectionOf creates a Collection from a slice (passed as interface{}).
 // items should be a []SomeModel.
-func CollectionOf(t Transformer, items interface{}) *Collection {
+func CollectionOf(t Transformer, items any) *Collection {
 	return &Collection{transformer: t, items: items}
 }
 
@@ -107,9 +107,9 @@ func (c *Collection) Respond(w http.ResponseWriter) {
 	var rawSlice []json.RawMessage
 	_ = json.Unmarshal(raw, &rawSlice)
 
-	var result []interface{}
+	var result []any
 	for _, item := range rawSlice {
-		var v interface{}
+		var v any
 		_ = json.Unmarshal(item, &v)
 		result = append(result, c.transformer.ToArray(v))
 	}
@@ -126,7 +126,7 @@ func (c *Collection) Respond(w http.ResponseWriter) {
 
 // ------------------- Helpers -------------------
 
-func writeJSON(w http.ResponseWriter, status int, v interface{}) {
+func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	json.NewEncoder(w).Encode(v) //nolint:errcheck

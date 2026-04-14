@@ -27,7 +27,7 @@ func AssertJSONBody(t *testing.T, scenario *Scenario, expected, actual []byte) {
 		return
 	}
 
-	var expVal, actVal interface{}
+	var expVal, actVal any
 
 	require.NoError(t,
 		json.Unmarshal(expected, &expVal),
@@ -63,11 +63,11 @@ func AssertMocksAllCalled(t *testing.T, scenario *Scenario, mt *MockTransport) {
 // DiffJSON returns a list of human-readable difference strings between two
 // JSON-decoded values.  Used internally; testify's assert.Equal will already
 // print a good diff, but this is kept for DumpScenario / manual use.
-func DiffJSON(path string, expected, actual interface{}) []string {
+func DiffJSON(path string, expected, actual any) []string {
 	var diffs []string
 	switch exp := expected.(type) {
-	case map[string]interface{}:
-		act, ok := actual.(map[string]interface{})
+	case map[string]any:
+		act, ok := actual.(map[string]any)
 		if !ok {
 			return append(diffs, fmt.Sprintf("  %s: expected object, got %T", keyPath(path), actual))
 		}
@@ -80,8 +80,8 @@ func DiffJSON(path string, expected, actual interface{}) []string {
 			}
 			diffs = append(diffs, DiffJSON(p, ev, av)...)
 		}
-	case []interface{}:
-		act, ok := actual.([]interface{})
+	case []any:
+		act, ok := actual.([]any)
 		if !ok {
 			return append(diffs, fmt.Sprintf("  %s: expected array, got %T", keyPath(path), actual))
 		}

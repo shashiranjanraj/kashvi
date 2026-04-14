@@ -44,7 +44,7 @@ func (q *Query) String() string {
 }
 
 // Model sets the model for the query (table resolution).
-func (q *Query) Model(v interface{}) *Query {
+func (q *Query) Model(v any) *Query {
 	if q.db == nil || q.Error != nil {
 		return q
 	}
@@ -53,7 +53,7 @@ func (q *Query) Model(v interface{}) *Query {
 }
 
 // Where appends a WHERE clause.
-func (q *Query) Where(query string, args ...interface{}) *Query {
+func (q *Query) Where(query string, args ...any) *Query {
 	if q.db == nil || q.Error != nil {
 		return q
 	}
@@ -76,7 +76,7 @@ func (q *Query) Select(fields ...string) *Query {
 	if q.db == nil || q.Error != nil || len(fields) == 0 {
 		return q
 	}
-	args := make([]interface{}, len(fields)-1)
+	args := make([]any, len(fields)-1)
 	for i, f := range fields[1:] {
 		args[i] = f
 	}
@@ -85,7 +85,7 @@ func (q *Query) Select(fields ...string) *Query {
 }
 
 // Joins adds a JOIN clause.
-func (q *Query) Joins(query string, args ...interface{}) *Query {
+func (q *Query) Joins(query string, args ...any) *Query {
 	if q.db == nil || q.Error != nil {
 		return q
 	}
@@ -127,7 +127,7 @@ func (q *Query) Count(count *int64) error {
 }
 
 // Get fetches all matching rows into dest.
-func (q *Query) Get(dest interface{}) error {
+func (q *Query) Get(dest any) error {
 	if q.Error != nil {
 		return q.Error
 	}
@@ -138,7 +138,7 @@ func (q *Query) Get(dest interface{}) error {
 }
 
 // First fetches the first matching row into dest.
-func (q *Query) First(dest interface{}) error {
+func (q *Query) First(dest any) error {
 	if q.Error != nil {
 		return q.Error
 	}
@@ -149,7 +149,7 @@ func (q *Query) First(dest interface{}) error {
 }
 
 // GetWithPagination fetches rows with pagination metadata.
-func (q *Query) GetWithPagination(dest interface{}, page, limit int) (Pagination, error) {
+func (q *Query) GetWithPagination(dest any, page, limit int) (Pagination, error) {
 	if q.Error != nil {
 		return Pagination{}, q.Error
 	}
@@ -180,7 +180,7 @@ func (q *Query) GetWithPagination(dest interface{}, page, limit int) (Pagination
 }
 
 // Cache tries the cache first; on miss it executes the query and stores the result.
-func (q *Query) Cache(key string, ttl time.Duration, dest interface{}) error {
+func (q *Query) Cache(key string, ttl time.Duration, dest any) error {
 	if q.Error != nil {
 		return q.Error
 	}
@@ -208,7 +208,7 @@ func (q *Query) Cache(key string, ttl time.Duration, dest interface{}) error {
 // ---------- Write ----------
 
 // Create inserts value into the database.
-func (q *Query) Create(value interface{}) error {
+func (q *Query) Create(value any) error {
 	if q.db == nil || q.Error != nil {
 		return q.Error
 	}
@@ -216,7 +216,7 @@ func (q *Query) Create(value interface{}) error {
 }
 
 // Save upserts value (creates if no primary key, updates otherwise).
-func (q *Query) Save(value interface{}) error {
+func (q *Query) Save(value any) error {
 	if q.db == nil || q.Error != nil {
 		return q.Error
 	}
@@ -224,7 +224,7 @@ func (q *Query) Save(value interface{}) error {
 }
 
 // Update sets a single column to value on the current query scope.
-func (q *Query) Update(col string, value interface{}) error {
+func (q *Query) Update(col string, value any) error {
 	if q.db == nil || q.Error != nil {
 		return q.Error
 	}
@@ -232,7 +232,7 @@ func (q *Query) Update(col string, value interface{}) error {
 }
 
 // Updates sets multiple columns from a map or struct.
-func (q *Query) Updates(values interface{}) error {
+func (q *Query) Updates(values any) error {
 	if q.db == nil || q.Error != nil {
 		return q.Error
 	}
@@ -240,7 +240,7 @@ func (q *Query) Updates(values interface{}) error {
 }
 
 // Delete soft-deletes (or hard-deletes if no DeletedAt field) matching rows.
-func (q *Query) Delete(value interface{}, conds ...interface{}) error {
+func (q *Query) Delete(value any, conds ...any) error {
 	if q.db == nil || q.Error != nil {
 		return q.Error
 	}
@@ -296,8 +296,8 @@ func normalizePagination(page, limit int) (int, int) {
 // Cacher is a minimal interface for the cache layer, so orm does not directly
 // import pkg/cache (which would create a cycle via pkg/database).
 type Cacher interface {
-	Get(key string, dest interface{}) bool
-	Set(key string, value interface{}, ttl time.Duration) error
+	Get(key string, dest any) bool
+	Set(key string, value any, ttl time.Duration) error
 }
 
 // CacheStore is set at boot time (e.g. in internal/kernel/http.go) to wire up

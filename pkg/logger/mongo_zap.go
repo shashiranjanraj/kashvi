@@ -154,7 +154,7 @@ func (c *MongoZapCore) drainLoop() {
 	ticker := time.NewTicker(mongoDrainTick)
 	defer ticker.Stop()
 
-	batch := make([]interface{}, 0, mongoBatchSize)
+	batch := make([]any, 0, mongoBatchSize)
 
 	flush := func() {
 		if len(batch) == 0 {

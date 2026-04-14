@@ -25,7 +25,7 @@ func maxBodyBytes() int64 {
 // The body is capped at MAX_BODY_BYTES (default 4 MB) to prevent memory exhaustion.
 // Returns (errs, nil) when there are validation failures.
 // Returns (nil, err) when the body is malformed JSON or too large.
-func JSON(r *http.Request, dest interface{}) (errs map[string]string, err error) {
+func JSON(r *http.Request, dest any) (errs map[string]string, err error) {
 	r.Body = http.MaxBytesReader(nil, r.Body, maxBodyBytes())
 
 	dec := json.NewDecoder(r.Body)

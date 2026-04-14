@@ -11,7 +11,7 @@ import (
 	"github.com/shashiranjanraj/kashvi/pkg/router"
 )
 
-type envelope map[string]interface{}
+type envelope map[string]any
 
 func TestWrap(t *testing.T) {
 	tests := []struct {
@@ -66,7 +66,7 @@ func TestWrap(t *testing.T) {
 			}
 
 			if tt.handlerError != nil {
-				var response map[string]interface{}
+				var response map[string]any
 				if err := json.Unmarshal(rr.Body.Bytes(), &response); err != nil {
 					t.Fatalf("failed to parse response JSON: %v", err)
 				}

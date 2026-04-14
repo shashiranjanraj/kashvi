@@ -52,7 +52,7 @@ func (m *Manager) persistFailed(job Job, typeName string, lastErr error, attempt
 
 	payload, err := json.Marshal(job)
 	if err != nil {
-		payload = []byte(fmt.Sprintf(`{"error": "could not marshal: %v"}`, err))
+		payload = fmt.Appendf(nil, `{"error": "could not marshal: %v"}`, err)
 	}
 
 	record := FailedJobRecord{

@@ -124,10 +124,7 @@ func Chunk[T any](s []T, n int) [][]T {
 	}
 	var out [][]T
 	for i := 0; i < len(s); i += n {
-		end := i + n
-		if end > len(s) {
-			end = len(s)
-		}
+		end := min(i+n, len(s))
 		out = append(out, s[i:end])
 	}
 	return out
@@ -207,9 +204,6 @@ func Paginate[T any](s []T, page, size int) []T {
 	if start >= len(s) {
 		return nil
 	}
-	end := start + size
-	if end > len(s) {
-		end = len(s)
-	}
+	end := min(start+size, len(s))
 	return s[start:end]
 }

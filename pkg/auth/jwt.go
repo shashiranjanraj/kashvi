@@ -47,7 +47,7 @@ func GenerateRefreshToken(userID uint, role string) (string, error) {
 
 // ValidateToken parses and validates a JWT string.
 func ValidateToken(t string) (*Claims, error) {
-	token, err := jwt.ParseWithClaims(t, &Claims{}, func(tok *jwt.Token) (interface{}, error) {
+	token, err := jwt.ParseWithClaims(t, &Claims{}, func(tok *jwt.Token) (any, error) {
 		return secret(), nil
 	})
 	if err != nil {

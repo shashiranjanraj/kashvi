@@ -6,7 +6,7 @@ import (
 )
 
 // Handler is a function that receives an event payload.
-type Handler func(payload interface{})
+type Handler func(payload any)
 
 var (
 	mu       sync.RWMutex
@@ -21,7 +21,7 @@ func Listen(event string, handler Handler) {
 }
 
 // Fire dispatches an event synchronously to all registered listeners.
-func Fire(event string, payload interface{}) {
+func Fire(event string, payload any) {
 	mu.RLock()
 	hs := make([]Handler, len(handlers[event]))
 	copy(hs, handlers[event])
@@ -34,7 +34,7 @@ func Fire(event string, payload interface{}) {
 
 // FireAsync dispatches the event to all listeners concurrently.
 // It returns immediately without waiting for handlers to complete.
-func FireAsync(event string, payload interface{}) {
+func FireAsync(event string, payload any) {
 	mu.RLock()
 	hs := make([]Handler, len(handlers[event]))
 	copy(hs, handlers[event])

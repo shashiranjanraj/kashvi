@@ -266,7 +266,6 @@ func (d *s3Disk) DeleteDirectory(path string) error {
 	}
 	objs := make([]types.ObjectIdentifier, len(keys))
 	for i, k := range keys {
-		k := k
 		objs[i] = types.ObjectIdentifier{Key: &k}
 	}
 	_, err = d.client.DeleteObjects(context.Background(), &s3.DeleteObjectsInput{

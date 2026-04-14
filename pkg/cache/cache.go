@@ -34,7 +34,7 @@ func Connect() error {
 
 // Get retrieves a cached value by key and unmarshals into dest.
 // Returns true on a cache hit, false on miss or error.
-func Get(key string, dest interface{}) bool {
+func Get(key string, dest any) bool {
 	if RDB == nil {
 		return false
 	}
@@ -52,7 +52,7 @@ func Get(key string, dest interface{}) bool {
 }
 
 // Set stores value in Redis under key for the given TTL.
-func Set(key string, value interface{}, ttl time.Duration) error {
+func Set(key string, value any, ttl time.Duration) error {
 	if RDB == nil {
 		return nil
 	}
