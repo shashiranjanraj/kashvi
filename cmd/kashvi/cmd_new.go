@@ -165,5 +165,85 @@ QUEUE_DRIVER=sync
 		return err
 	}
 
+	// Scaffold a comprehensive Makefile
+	makefileData := `# Makefile for Kashvi project
+
+.PHONY: run build migrate rollback status seed test clean help
+
+all: help
+
+## run: Start the development HTTP + gRPC server
+run:
+	go run . serve
+
+## build: Build the project binary
+build:
+	@mkdir -p bin
+	go build -o bin/server .
+
+## migrate: Run pending database migrations
+migrate:
+	go run . migrate
+
+## rollback: Rollback the last migration batch
+rollback:
+	go run . migrate:rollback
+
+## status: Show migration status
+status:
+	go run . migrate:status
+
+## seed: Seed the database with sample data
+seed:
+	go run . seed
+
+## test: Run automated tests
+test:
+	go test ./...
+
+## clean: Clean up build and database files
+clean:
+	rm -rf bin/
+	rm -f *.sqlite
+	rm -f *.db
+	rm -f coverage.out
+
+## help: Show this help message
+help:
+	@echo "Kashvi Project Makefile"
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Targets:"
+	@fgrep -h "##" $(MAKEFILE_LIST) | fgrep -v fgrep | sed -e 's/\\$$//' | sed -e 's/##//'
+`
+	if err := os.WriteFile(filepath.Join(projectPath, "Makefile"), []byte(makefileData), 0o644); err != nil {
+		return err
+	}
+
+	// Scaffold a standard .gitignore
+	gitignoreData := `# Binaries
+bin/
+kashvi
+
+# Environment files
+.env
+!.env.example
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Test artifacts
+coverage.out
+testdata/*.actual.*
+
+# OS-specific
+.DS_Store
+`
+	if err := os.WriteFile(filepath.Join(projectPath, ".gitignore"), []byte(gitignoreData), 0o644); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -1,7 +1,7 @@
 import os
 import re
 
-doc_content = open('docs/doc.md').read()
+doc_content = open('README.md').read()
 pkg_dir = 'pkg'
 missing_symbols = {}
 all_symbols = {}

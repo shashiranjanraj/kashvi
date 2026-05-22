@@ -65,7 +65,7 @@ Controllers bind incoming JSON to **DTOs** (e.g. `CreateProductRequest`), valida
 
 ### 1. Install Go
 
-Ensure you have Go 1.24 or later installed (see `go.mod` in this repo).
+Ensure you have Go 1.26 or later installed (see `go.mod` in this repo).
 
 ### 2. Install Kashvi CLI
 
@@ -961,7 +961,7 @@ kashvi build
 Create `Dockerfile`:
 
 ```dockerfile
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -1829,7 +1829,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless
@@ -2660,7 +2660,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.24-alpine AS builder
+FROM golang:1.26-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless
