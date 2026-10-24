@@ -71,3 +71,38 @@ func TestRateLimitWindowResets(t *testing.T) {
 		t.Fatalf("after window: got %d, want 200", code)
 	}
 }
+
+func TestRateLimitIgnoresSpoofedForwardedFor(t *testing.T) {
+	h := RateLimit(1, time.Minute)(okHandler)
+
+	// A direct (public) client cannot pick a fresh key by changing X-Forwarded-For.
+	if code := doRequest(h, "198.51.100.7:1", "1.1.1.1"); code != http.StatusOK {
+		t.Fatalf("got %d, want 200", code)
+	}
+	if code := doRequest(h, "198.51.100.7:2", "2.2.2.2"); code != http.StatusTooManyRequests {
+		t.Fatalf("got %d, want 429", code)
+	}
+}
+
+func TestClientIPTrustedProxies(t *testing.T) {
+	trusted := parseTrustedProxies([]string{"198.51.100.0/24", "203.0.113.9"})
+	cases := []struct {
+		remote, xff, want string
+	}{
+		{"198.51.100.7:1", "192.0.2.1, 203.0.113.9", "192.0.2.1"}, // skips trusted hops
+		{"198.51.100.7:1", "6.6.6.6, 192.0.2.1", "192.0.2.1"},     // rightmost untrusted wins
+		{"192.0.2.50:1", "192.0.2.1", "192.0.2.50"},               // untrusted peer: header ignored
+		{"10.0.0.1:1", "192.0.2.1", "10.0.0.1"},                   // private not trusted when list given
+		{"198.51.100.7:1", "", "198.51.100.7"},
+	}
+	for _, c := range cases {
+		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req.RemoteAddr = c.remote
+		if c.xff != "" {
+			req.Header.Set("X-Forwarded-For", c.xff)
+		}
+		if got := clientIP(req, trusted); got != c.want {
+			t.Errorf("clientIP(%s, %q) = %s, want %s", c.remote, c.xff, got, c.want)
+		}
+	}
+}
