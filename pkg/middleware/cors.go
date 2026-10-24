@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+
+	"github.com/shashiranjanraj/kashvi/config"
 )
 
 // CORSOptions configures the CORS middleware.
@@ -14,10 +16,11 @@ type CORSOptions struct {
 	MaxAge         int // seconds for preflight cache
 }
 
-// DefaultCORSOptions returns permissive options suited for local development.
+// DefaultCORSOptions returns options whose allowed origins come from
+// CORS_ALLOWED_ORIGINS (comma-separated, default "*").
 func DefaultCORSOptions() CORSOptions {
 	return CORSOptions{
-		AllowedOrigins: []string{"*"},
+		AllowedOrigins: config.CORSAllowedOrigins(),
 		AllowedMethods: []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders: []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		MaxAge:         300,
