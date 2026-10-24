@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/shashiranjanraj/kashvi/config"
 	"github.com/shashiranjanraj/kashvi/pkg/cache"
 	"github.com/shashiranjanraj/kashvi/pkg/database"
 	"github.com/shashiranjanraj/kashvi/pkg/metrics"
@@ -46,7 +47,7 @@ func buildHandler(a *Application) http.Handler {
 	r.Use(middleware.Logger)
 	r.Use(session.Middleware(session.DefaultOptions()))
 	r.Use(middleware.CORS(middleware.DefaultCORSOptions()))
-	r.Use(middleware.RateLimit(200, time.Minute))
+	r.Use(middleware.RateLimit(config.RateLimitMax(), time.Minute))
 
 	// Prometheus /metrics endpoint — no auth, no rate limit.
 	r.HandleFunc("/metrics", metrics.Handler())
