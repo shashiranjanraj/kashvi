@@ -718,6 +718,8 @@ Configure JWT secret in `.env`:
 
 ```env
 JWT_SECRET=your-super-secret-key
+JWT_TTL=24h           # access-token lifetime
+JWT_REFRESH_TTL=168h  # refresh-token lifetime
 ```
 
 ### Auth middleware
@@ -910,9 +912,9 @@ The **HTTP kernel** already registers metrics, recovery, request ID, logger, ses
 | Symbol | Role |
 |--------|------|
 | `middleware.AuthMiddleware` | Validates `Authorization: Bearer` and sets user context |
-| `middleware.CORS(opts)` | CORS; use `middleware.DefaultCORSOptions()` or custom `CORSOptions` |
+| `middleware.CORS(opts)` | CORS; `middleware.DefaultCORSOptions()` reads `CORS_ALLOWED_ORIGINS`, or pass custom `CORSOptions` |
 | `middleware.Logger` | Request logging (also applied globally in the kernel) |
-| `middleware.RateLimit(max, window)` | Per-client-IP rate limiter; each call keeps its own counters. Applied globally at `RATE_LIMIT_MAX` requests/minute (default 2000) |
+| `middleware.RateLimit(max, window)` | Per-client-IP rate limiter; each call keeps its own counters. `X-Forwarded-For` is only trusted from `TRUSTED_PROXIES`. Applied globally at `RATE_LIMIT_MAX` requests/minute (default 2000) |
 | `middleware.Recovery` | Panic recovery (also applied globally) |
 
 ### Usage (typical: protect a group)
@@ -1009,15 +1011,31 @@ CMD ["./main"]
 
 ### Environment Variables
 
+Configuration is resolved in this order: OS environment variables, then `.env`, then `config/app.json`, then built-in defaults. In Docker or Kubernetes you can therefore pass settings as container environment variables without shipping a `.env` file.
+
 For production, set:
 
 ```env
 APP_ENV=production
 JWT_SECRET=your-production-secret
+APP_KEY=your-encryption-key
 DB_DRIVER=postgres
 DATABASE_DSN=your-production-dsn
 REDIS_ADDR=your-redis-host:6379
+CORS_ALLOWED_ORIGINS=https://app.example.com
+TRUSTED_PROXIES=10.0.0.0/8
 ```
+
+The server refuses to start in production with the default `JWT_SECRET`, and logs a warning if `APP_KEY` is unset (`pkg/crypt` then falls back to `JWT_SECRET`; to keep existing encrypted data readable, set `APP_KEY` to your current `JWT_SECRET` value).
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `JWT_TTL` | `24h` | Access-token lifetime (Go duration) |
+| `JWT_REFRESH_TTL` | `168h` | Refresh-token lifetime |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | empty | When set, added to issued tokens and required on validation |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated origins used by `middleware.DefaultCORSOptions()` |
+| `TRUSTED_PROXIES` | loopback + private networks | IPs/CIDRs whose `X-Forwarded-For` is trusted by the rate limiter |
+| `RATE_LIMIT_MAX` | `2000` | Global requests per minute per client IP |
 
 ## Best Practices
 
