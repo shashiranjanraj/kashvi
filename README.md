@@ -765,6 +765,37 @@ func Login(c *ctx.Context) {
 }
 ```
 
+### Refresh Tokens
+
+`auth.GenerateRefreshToken` issues a 7-day token marked as a refresh token. `auth.ValidateToken` (and therefore `middleware.AuthMiddleware`) rejects refresh tokens with `auth.ErrRefreshToken`, so they can only be exchanged for a new access token:
+
+```go
+func Refresh(c *ctx.Context) {
+    var input struct {
+        RefreshToken string `json:"refresh_token" validate:"required"`
+    }
+    if !c.BindJSON(&input) {
+        return
+    }
+
+    claims, err := auth.ValidateRefreshToken(input.RefreshToken)
+    if err != nil {
+        c.Error(http.StatusUnauthorized, "Invalid refresh token")
+        return
+    }
+
+    token, err := auth.GenerateToken(claims.UserID, claims.Role)
+    if err != nil {
+        c.Error(http.StatusInternalServerError, "Failed to generate token")
+        return
+    }
+
+    c.Success(map[string]any{"token": token})
+}
+```
+
+Tokens must be signed with HS256; tokens using any other algorithm are rejected.
+
 ## Caching
 
 ### Basic Usage
@@ -881,7 +912,7 @@ The **HTTP kernel** already registers metrics, recovery, request ID, logger, ses
 | `middleware.AuthMiddleware` | Validates `Authorization: Bearer` and sets user context |
 | `middleware.CORS(opts)` | CORS; use `middleware.DefaultCORSOptions()` or custom `CORSOptions` |
 | `middleware.Logger` | Request logging (also applied globally in the kernel) |
-| `middleware.RateLimit(max, window)` | Rate limiter (also applied globally) |
+| `middleware.RateLimit(max, window)` | Per-client-IP rate limiter; each call keeps its own counters. Applied globally at `RATE_LIMIT_MAX` requests/minute (default 2000) |
 | `middleware.Recovery` | Panic recovery (also applied globally) |
 
 ### Usage (typical: protect a group)
