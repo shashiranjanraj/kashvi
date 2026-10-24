@@ -42,6 +42,11 @@ func CORS(opts CORSOptions) func(http.Handler) http.Handler {
 				}
 			}
 
+			if allowed != "*" {
+				// The response depends on the request Origin; tell caches.
+				w.Header().Add("Vary", "Origin")
+			}
+
 			if allowed != "" {
 				w.Header().Set("Access-Control-Allow-Origin", allowed)
 				w.Header().Set("Access-Control-Allow-Methods", methods)
