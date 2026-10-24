@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/golang-jwt/jwt/v5"
 )
@@ -58,5 +59,46 @@ func TestPassword(t *testing.T) {
 	}
 	if !CheckPassword(h, "s3cret") || CheckPassword(h, "wrong") {
 		t.Fatal("CheckPassword mismatch")
+	}
+}
+
+func TestIssuerAndAudience(t *testing.T) {
+	t.Setenv("JWT_ISSUER", "kashvi-test")
+	t.Setenv("JWT_AUDIENCE", "api")
+	tok, err := GenerateToken(1, "user")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := ValidateToken(tok)
+	if err != nil {
+		t.Fatalf("ValidateToken: %v", err)
+	}
+	if c.Issuer != "kashvi-test" || len(c.Audience) != 1 || c.Audience[0] != "api" {
+		t.Fatalf("unexpected claims: %+v", c.RegisteredClaims)
+	}
+
+	t.Setenv("JWT_AUDIENCE", "other")
+	if _, err := ValidateToken(tok); err == nil {
+		t.Fatal("expected audience mismatch to be rejected")
+	}
+	t.Setenv("JWT_AUDIENCE", "api")
+	t.Setenv("JWT_ISSUER", "someone-else")
+	if _, err := ValidateToken(tok); err == nil {
+		t.Fatal("expected issuer mismatch to be rejected")
+	}
+}
+
+func TestTokenTTL(t *testing.T) {
+	t.Setenv("JWT_TTL", "1m")
+	tok, err := GenerateToken(1, "user")
+	if err != nil {
+		t.Fatal(err)
+	}
+	c, err := ValidateToken(tok)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ttl := c.ExpiresAt.Sub(c.IssuedAt.Time); ttl != time.Minute {
+		t.Fatalf("ttl = %v, want 1m", ttl)
 	}
 }
