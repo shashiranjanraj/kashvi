@@ -33,7 +33,10 @@ var ErrDecrypt = errors.New("crypt: decryption failed")
 
 // key derives a 32-byte AES-256 key from the APP_KEY / JWT_SECRET config value.
 func key() ([]byte, error) {
-	secret := config.Get("APP_KEY", config.JWTSecret())
+	secret := config.AppKey()
+	if secret == "" {
+		secret = config.JWTSecret()
+	}
 	if secret == "" {
 		return nil, errors.New("crypt: APP_KEY not configured")
 	}

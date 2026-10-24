@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -188,6 +189,54 @@ func RateLimitMax() int {
 	return n
 }
 
+// ── Auth & HTTP ───────────────────────────────────────────────────────────────
+
+// JWTTTL returns the access-token lifetime (JWT_TTL, default 24h).
+func JWTTTL() time.Duration { _ = Load(); return duration("JWT_TTL", 24*time.Hour) }
+
+// JWTRefreshTTL returns the refresh-token lifetime (JWT_REFRESH_TTL, default 168h).
+func JWTRefreshTTL() time.Duration { _ = Load(); return duration("JWT_REFRESH_TTL", 7*24*time.Hour) }
+
+// JWTIssuer returns the expected "iss" claim (JWT_ISSUER). Empty disables the check.
+func JWTIssuer() string { _ = Load(); return get("JWT_ISSUER", "") }
+
+// JWTAudience returns the expected "aud" claim (JWT_AUDIENCE). Empty disables the check.
+func JWTAudience() string { _ = Load(); return get("JWT_AUDIENCE", "") }
+
+// AppKey returns the encryption key used by pkg/crypt (APP_KEY). Empty means unset.
+func AppKey() string { _ = Load(); return get("APP_KEY", "") }
+
+// IsProduction reports whether APP_ENV is "production" or "prod".
+func IsProduction() bool {
+	env := strings.ToLower(AppEnv())
+	return env == "production" || env == "prod"
+}
+
+// CORSAllowedOrigins returns the comma-separated CORS_ALLOWED_ORIGINS list (default "*").
+func CORSAllowedOrigins() []string { _ = Load(); return list("CORS_ALLOWED_ORIGINS", "*") }
+
+// TrustedProxies returns the comma-separated TRUSTED_PROXIES list of IPs or CIDRs
+// whose X-Forwarded-For header is trusted. Empty means the middleware default.
+func TrustedProxies() []string { _ = Load(); return list("TRUSTED_PROXIES", "") }
+
+func duration(key string, fallback time.Duration) time.Duration {
+	d, err := time.ParseDuration(get(key, ""))
+	if err != nil || d <= 0 {
+		return fallback
+	}
+	return d
+}
+
+func list(key, fallback string) []string {
+	var out []string
+	for _, item := range strings.Split(get(key, fallback), ",") {
+		if item = strings.TrimSpace(item); item != "" {
+			out = append(out, item)
+		}
+	}
+	return out
+}
+
 func loadFromFiles(configPath, envPath string) error {
 	loaded := defaultValues()
 
@@ -258,7 +307,7 @@ func mergeDotEnv(path string, out map[string]string) error {
 		}
 
 		key := strings.ToUpper(strings.TrimSpace(line[:idx]))
-		value := strings.TrimSpace(line[idx+1:])
+		value := stripInlineComment(strings.TrimSpace(line[idx+1:]))
 		value = strings.Trim(value, `"'`)
 		if key == "" {
 			continue
@@ -273,7 +322,36 @@ func mergeDotEnv(path string, out map[string]string) error {
 	return nil
 }
 
+// stripInlineComment removes a trailing " # comment" from an unquoted value.
+func stripInlineComment(value string) string {
+	if value == "" {
+		return value
+	}
+	if q := value[0]; q == '"' || q == '\'' {
+		// Quoted: keep everything up to the closing quote, drop what follows.
+		if j := strings.IndexByte(value[1:], q); j >= 0 {
+			return value[:j+2]
+		}
+		return value
+	}
+	if value[0] == '#' {
+		return ""
+	}
+	if i := strings.Index(value, " #"); i >= 0 {
+		value = value[:i]
+	}
+	if i := strings.Index(value, "\t#"); i >= 0 {
+		value = value[:i]
+	}
+	return strings.TrimSpace(value)
+}
+
+// get resolves a key with precedence: OS environment > .env > config/app.json > fallback.
 func get(key, fallback string) string {
+	if value, ok := os.LookupEnv(key); ok && strings.TrimSpace(value) != "" {
+		return strings.TrimSpace(value)
+	}
+
 	mu.RLock()
 	defer mu.RUnlock()
 

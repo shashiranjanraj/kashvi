@@ -38,3 +38,6 @@ __pycache__/
 # Kashvi-specific
 coverage.out
 docs/doc.md
+bin/
+/cmd/kashvi/kashvi
+*.db

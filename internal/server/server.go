@@ -35,9 +35,12 @@ func Start(handler http.Handler) error {
 	logger.Info("runtime", "GOMAXPROCS", procs, "NumCPU", runtime.NumCPU())
 
 	// Guard: refuse to start in production with the default JWT secret.
-	if (config.AppEnv() == "production" || config.AppEnv() == "prod") &&
-		config.JWTSecret() == "change-me-in-production" {
+	if config.IsProduction() && config.JWTSecret() == "change-me-in-production" {
 		return fmt.Errorf("refusing to start: JWT_SECRET must be changed in production")
+	}
+	if config.IsProduction() && config.AppKey() == "" {
+		logger.Warn("APP_KEY is not set; pkg/crypt is falling back to JWT_SECRET. " +
+			"Set APP_KEY to the current JWT_SECRET value to keep existing data readable, then rotate JWT_SECRET independently.")
 	}
 
 	if err := database.Connect(); err != nil {

@@ -65,7 +65,7 @@ Controllers bind incoming JSON to **DTOs** (e.g. `CreateProductRequest`), valida
 
 ### 1. Install Go
 
-Ensure you have Go 1.26 or later installed (see `go.mod` in this repo).
+Ensure you have Go 1.27 or later installed (see `go.mod` in this repo).
 
 ### 2. Install Kashvi CLI
 
@@ -718,6 +718,8 @@ Configure JWT secret in `.env`:
 
 ```env
 JWT_SECRET=your-super-secret-key
+JWT_TTL=24h           # access-token lifetime
+JWT_REFRESH_TTL=168h  # refresh-token lifetime
 ```
 
 ### Auth middleware
@@ -764,6 +766,37 @@ func Login(c *ctx.Context) {
     })
 }
 ```
+
+### Refresh Tokens
+
+`auth.GenerateRefreshToken` issues a 7-day token marked as a refresh token. `auth.ValidateToken` (and therefore `middleware.AuthMiddleware`) rejects refresh tokens with `auth.ErrRefreshToken`, so they can only be exchanged for a new access token:
+
+```go
+func Refresh(c *ctx.Context) {
+    var input struct {
+        RefreshToken string `json:"refresh_token" validate:"required"`
+    }
+    if !c.BindJSON(&input) {
+        return
+    }
+
+    claims, err := auth.ValidateRefreshToken(input.RefreshToken)
+    if err != nil {
+        c.Error(http.StatusUnauthorized, "Invalid refresh token")
+        return
+    }
+
+    token, err := auth.GenerateToken(claims.UserID, claims.Role)
+    if err != nil {
+        c.Error(http.StatusInternalServerError, "Failed to generate token")
+        return
+    }
+
+    c.Success(map[string]any{"token": token})
+}
+```
+
+Tokens must be signed with HS256; tokens using any other algorithm are rejected.
 
 ## Caching
 
@@ -879,9 +912,9 @@ The **HTTP kernel** already registers metrics, recovery, request ID, logger, ses
 | Symbol | Role |
 |--------|------|
 | `middleware.AuthMiddleware` | Validates `Authorization: Bearer` and sets user context |
-| `middleware.CORS(opts)` | CORS; use `middleware.DefaultCORSOptions()` or custom `CORSOptions` |
+| `middleware.CORS(opts)` | CORS; `middleware.DefaultCORSOptions()` reads `CORS_ALLOWED_ORIGINS`, or pass custom `CORSOptions` |
 | `middleware.Logger` | Request logging (also applied globally in the kernel) |
-| `middleware.RateLimit(max, window)` | Rate limiter (also applied globally) |
+| `middleware.RateLimit(max, window)` | Per-client-IP rate limiter; each call keeps its own counters. `X-Forwarded-For` is only trusted from `TRUSTED_PROXIES`. Applied globally at `RATE_LIMIT_MAX` requests/minute (default 2000) |
 | `middleware.Recovery` | Panic recovery (also applied globally) |
 
 ### Usage (typical: protect a group)
@@ -961,7 +994,7 @@ kashvi build
 Create `Dockerfile`:
 
 ```dockerfile
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -978,15 +1011,31 @@ CMD ["./main"]
 
 ### Environment Variables
 
+Configuration is resolved in this order: OS environment variables, then `.env`, then `config/app.json`, then built-in defaults. In Docker or Kubernetes you can therefore pass settings as container environment variables without shipping a `.env` file.
+
 For production, set:
 
 ```env
 APP_ENV=production
 JWT_SECRET=your-production-secret
+APP_KEY=your-encryption-key
 DB_DRIVER=postgres
 DATABASE_DSN=your-production-dsn
 REDIS_ADDR=your-redis-host:6379
+CORS_ALLOWED_ORIGINS=https://app.example.com
+TRUSTED_PROXIES=10.0.0.0/8
 ```
+
+The server refuses to start in production with the default `JWT_SECRET`, and logs a warning if `APP_KEY` is unset (`pkg/crypt` then falls back to `JWT_SECRET`; to keep existing encrypted data readable, set `APP_KEY` to your current `JWT_SECRET` value).
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `JWT_TTL` | `24h` | Access-token lifetime (Go duration) |
+| `JWT_REFRESH_TTL` | `168h` | Refresh-token lifetime |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | empty | When set, added to issued tokens and required on validation |
+| `CORS_ALLOWED_ORIGINS` | `*` | Comma-separated origins used by `middleware.DefaultCORSOptions()` |
+| `TRUSTED_PROXIES` | loopback + private networks | IPs/CIDRs whose `X-Forwarded-For` is trusted by the rate limiter |
+| `RATE_LIMIT_MAX` | `2000` | Global requests per minute per client IP |
 
 ## Best Practices
 
@@ -1829,7 +1878,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless
@@ -2660,7 +2709,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 ```dockerfile
 # Dockerfile.serverless
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 WORKDIR /app
 COPY . .
 RUN go build -o main ./cmd/serverless

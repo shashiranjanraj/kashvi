@@ -8,8 +8,8 @@ import (
 	"fmt"
 
 	"github.com/shashiranjanraj/kashvi/config"
-	"github.com/shashiranjanraj/kashvi/pkg/database"
 	"github.com/shashiranjanraj/kashvi/internal/server"
+	"github.com/shashiranjanraj/kashvi/pkg/database"
 )
 
 // startServer builds the HTTP handler from the application config and
