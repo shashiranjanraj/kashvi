@@ -21,7 +21,7 @@ func Wrap(h ErrHandlerFunc) http.HandlerFunc {
 		if err != nil {
 			// Convert to an *apperror.Error (defaults to 500 Internal if it's a generic error)
 			appErr := apperror.TryConvert(err)
-			
+
 			// Log the internal error if there is one
 			if appErr.Err != nil {
 				log := logger.WithCtx(r.Context())
